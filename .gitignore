@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.local
 .env.production
+
+# Project documentation (development only)
+PROJECT_PLAN.md
