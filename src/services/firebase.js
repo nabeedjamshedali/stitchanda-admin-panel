@@ -37,7 +37,7 @@ export const analytics = getAnalytics(app);
 
 export const getCustomers = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'customers'));
+    const querySnapshot = await getDocs(collection(db, 'customer'));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error getting customers:', error);
@@ -47,7 +47,7 @@ export const getCustomers = async () => {
 
 export const getCustomer = async (id) => {
   try {
-    const docRef = doc(db, 'customers', id);
+    const docRef = doc(db, 'customer', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
@@ -61,7 +61,7 @@ export const getCustomer = async (id) => {
 
 export const addCustomer = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, 'customers'), {
+    const docRef = await addDoc(collection(db, 'customer'), {
       ...data,
       createdAt: serverTimestamp(),
       totalOrders: 0,
@@ -76,7 +76,7 @@ export const addCustomer = async (data) => {
 
 export const updateCustomer = async (id, data) => {
   try {
-    const docRef = doc(db, 'customers', id);
+    const docRef = doc(db, 'customer', id);
     await updateDoc(docRef, {
       ...data,
       updatedAt: serverTimestamp()
@@ -89,7 +89,7 @@ export const updateCustomer = async (id, data) => {
 
 export const deleteCustomer = async (id) => {
   try {
-    await deleteDoc(doc(db, 'customers', id));
+    await deleteDoc(doc(db, 'customer', id));
   } catch (error) {
     console.error('Error deleting customer:', error);
     throw error;
@@ -114,7 +114,7 @@ export const searchCustomers = async (searchTerm) => {
 
 export const getTailors = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'tailors'));
+    const querySnapshot = await getDocs(collection(db, 'tailor'));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error getting tailors:', error);
@@ -124,7 +124,7 @@ export const getTailors = async () => {
 
 export const getTailorsByStatus = async (status) => {
   try {
-    const q = query(collection(db, 'tailors'), where('status', '==', status));
+    const q = query(collection(db, 'tailor'), where('status', '==', status));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -143,7 +143,7 @@ export const getApprovedTailors = async () => {
 
 export const getTailor = async (id) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
@@ -157,7 +157,7 @@ export const getTailor = async (id) => {
 
 export const addTailor = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, 'tailors'), {
+    const docRef = await addDoc(collection(db, 'tailor'), {
       ...data,
       status: 'pending',
       createdAt: serverTimestamp(),
@@ -174,7 +174,7 @@ export const addTailor = async (data) => {
 
 export const updateTailor = async (id, data) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
       ...data,
       updatedAt: serverTimestamp()
@@ -187,7 +187,7 @@ export const updateTailor = async (id, data) => {
 
 export const approveTailor = async (id) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
       status: 'approved',
       approvedAt: serverTimestamp()
@@ -200,7 +200,7 @@ export const approveTailor = async (id) => {
 
 export const rejectTailor = async (id) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
       status: 'rejected',
       rejectedAt: serverTimestamp()
@@ -213,7 +213,7 @@ export const rejectTailor = async (id) => {
 
 export const suspendTailor = async (id) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
       status: 'suspended',
       suspendedAt: serverTimestamp()
@@ -226,7 +226,7 @@ export const suspendTailor = async (id) => {
 
 export const activateTailor = async (id) => {
   try {
-    const docRef = doc(db, 'tailors', id);
+    const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
       status: 'active',
       activatedAt: serverTimestamp()
@@ -239,7 +239,7 @@ export const activateTailor = async (id) => {
 
 export const deleteTailor = async (id) => {
   try {
-    await deleteDoc(doc(db, 'tailors', id));
+    await deleteDoc(doc(db, 'tailor', id));
   } catch (error) {
     console.error('Error deleting tailor:', error);
     throw error;
@@ -250,7 +250,7 @@ export const deleteTailor = async (id) => {
 
 export const getRiders = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'riders'));
+    const querySnapshot = await getDocs(collection(db, 'driver'));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error getting riders:', error);
@@ -260,7 +260,7 @@ export const getRiders = async () => {
 
 export const getRidersByStatus = async (status) => {
   try {
-    const q = query(collection(db, 'riders'), where('status', '==', status));
+    const q = query(collection(db, 'driver'), where('status', '==', status));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -283,7 +283,7 @@ export const getActiveRiders = async () => {
 
 export const getRider = async (id) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
@@ -297,7 +297,7 @@ export const getRider = async (id) => {
 
 export const addRider = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, 'riders'), {
+    const docRef = await addDoc(collection(db, 'driver'), {
       ...data,
       status: 'pending',
       createdAt: serverTimestamp(),
@@ -314,7 +314,7 @@ export const addRider = async (data) => {
 
 export const updateRider = async (id, data) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       ...data,
       updatedAt: serverTimestamp()
@@ -327,7 +327,7 @@ export const updateRider = async (id, data) => {
 
 export const approveRider = async (id) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       status: 'approved',
       approvedAt: serverTimestamp()
@@ -340,7 +340,7 @@ export const approveRider = async (id) => {
 
 export const rejectRider = async (id) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       status: 'rejected',
       rejectedAt: serverTimestamp()
@@ -353,7 +353,7 @@ export const rejectRider = async (id) => {
 
 export const suspendRider = async (id) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       status: 'suspended',
       suspendedAt: serverTimestamp()
@@ -366,7 +366,7 @@ export const suspendRider = async (id) => {
 
 export const activateRider = async (id) => {
   try {
-    const docRef = doc(db, 'riders', id);
+    const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       status: 'active',
       activatedAt: serverTimestamp()
@@ -379,7 +379,7 @@ export const activateRider = async (id) => {
 
 export const deleteRider = async (id) => {
   try {
-    await deleteDoc(doc(db, 'riders', id));
+    await deleteDoc(doc(db, 'driver', id));
   } catch (error) {
     console.error('Error deleting rider:', error);
     throw error;
@@ -390,7 +390,7 @@ export const deleteRider = async (id) => {
 
 export const getOrders = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'orders'));
+    const querySnapshot = await getDocs(collection(db, 'order'));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error getting orders:', error);
@@ -400,7 +400,7 @@ export const getOrders = async () => {
 
 export const getOrdersByStatus = async (status) => {
   try {
-    const q = query(collection(db, 'orders'), where('status', '==', status));
+    const q = query(collection(db, 'order'), where('status', '==', status));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -411,7 +411,7 @@ export const getOrdersByStatus = async (status) => {
 
 export const getOrder = async (id) => {
   try {
-    const docRef = doc(db, 'orders', id);
+    const docRef = doc(db, 'order', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
@@ -425,7 +425,7 @@ export const getOrder = async (id) => {
 
 export const addOrder = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, 'orders'), {
+    const docRef = await addDoc(collection(db, 'order'), {
       ...data,
       status: 'pending',
       paymentStatus: 'pending',
@@ -445,7 +445,7 @@ export const addOrder = async (data) => {
 
 export const updateOrder = async (id, data) => {
   try {
-    const docRef = doc(db, 'orders', id);
+    const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
       ...data,
       updatedAt: serverTimestamp()
@@ -467,7 +467,7 @@ export const updateOrderStatus = async (id, status, description = '') => {
       description: description || `Order status updated to ${status}`
     });
 
-    const docRef = doc(db, 'orders', id);
+    const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
       status,
       timeline,
@@ -490,7 +490,7 @@ export const assignTailor = async (orderId, tailorId, tailorName) => {
       description: `Tailor ${tailorName} assigned to order`
     });
 
-    const docRef = doc(db, 'orders', orderId);
+    const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
       tailorId,
       tailorName,
@@ -515,7 +515,7 @@ export const assignRider = async (orderId, riderId, riderName, stage = 'pickup')
       description: `Rider ${riderName} assigned for ${stage}`
     });
 
-    const docRef = doc(db, 'orders', orderId);
+    const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
       riderId,
       riderName,
@@ -539,7 +539,7 @@ export const cancelOrder = async (id, reason = '') => {
       description: reason || 'Order cancelled'
     });
 
-    const docRef = doc(db, 'orders', id);
+    const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
       status: 'cancelled',
       cancelledAt: serverTimestamp(),
@@ -554,7 +554,7 @@ export const cancelOrder = async (id, reason = '') => {
 
 export const deleteOrder = async (id) => {
   try {
-    await deleteDoc(doc(db, 'orders', id));
+    await deleteDoc(doc(db, 'order', id));
   } catch (error) {
     console.error('Error deleting order:', error);
     throw error;
@@ -587,35 +587,35 @@ export const getPaymentsByOrder = async (orderId) => {
 // ==================== REAL-TIME LISTENERS ====================
 
 export const listenToTailors = (callback) => {
-  return onSnapshot(collection(db, 'tailors'), (snapshot) => {
+  return onSnapshot(collection(db, 'tailor'), (snapshot) => {
     const tailors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(tailors);
   });
 };
 
 export const listenToRiders = (callback) => {
-  return onSnapshot(collection(db, 'riders'), (snapshot) => {
+  return onSnapshot(collection(db, 'driver'), (snapshot) => {
     const riders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(riders);
   });
 };
 
 export const listenToOrders = (callback) => {
-  return onSnapshot(collection(db, 'orders'), (snapshot) => {
+  return onSnapshot(collection(db, 'order'), (snapshot) => {
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(orders);
   });
 };
 
 export const listenToCustomers = (callback) => {
-  return onSnapshot(collection(db, 'customers'), (snapshot) => {
+  return onSnapshot(collection(db, 'customer'), (snapshot) => {
     const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(customers);
   });
 };
 
 export const listenToPendingTailors = (callback) => {
-  const q = query(collection(db, 'tailors'), where('status', '==', 'pending'));
+  const q = query(collection(db, 'tailor'), where('status', '==', 'pending'));
   return onSnapshot(q, (snapshot) => {
     const pendingTailors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(pendingTailors);
@@ -623,7 +623,7 @@ export const listenToPendingTailors = (callback) => {
 };
 
 export const listenToPendingRiders = (callback) => {
-  const q = query(collection(db, 'riders'), where('status', '==', 'pending'));
+  const q = query(collection(db, 'driver'), where('status', '==', 'pending'));
   return onSnapshot(q, (snapshot) => {
     const pendingRiders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(pendingRiders);
