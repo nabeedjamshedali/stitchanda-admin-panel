@@ -10,6 +10,7 @@ import Customers from './pages/Customers';
 import Tailors from './pages/Tailors';
 import Riders from './pages/Riders';
 import Orders from './pages/Orders';
+import Payments from './pages/Payments';
 
 function App() {
   return (
@@ -82,6 +83,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <ProtectedRoute>
+                <Payments />
               </ProtectedRoute>
             }
           />

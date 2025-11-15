@@ -18,15 +18,16 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const success = login(username, password);
-      if (success) {
+      const result = await login(username, password);
+      if (result.success) {
         toast.success('Welcome to Stitchanda Admin Panel!');
         navigate('/');
       } else {
-        toast.error('Invalid username or password');
+        toast.error(result.message || 'Invalid username or password');
       }
     } catch (error) {
       toast.error('Login failed. Please try again.');
+      console.error('Login error:', error);
     } finally {
       setLoading(false);
     }

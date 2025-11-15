@@ -14,7 +14,7 @@ import {
   ShoppingBag,
   Database,
 } from 'lucide-react';
-import { getStatistics, getOrders } from '../services/firebase';
+import { getStatistics, getOrders } from '../lib/firebase';
 import { seedSampleData } from '../utils/seedData';
 import toast from 'react-hot-toast';
 

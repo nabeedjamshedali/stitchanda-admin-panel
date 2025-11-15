@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { DATE_FORMAT, DATETIME_FORMAT } from './constants';
+import { DATE_FORMAT, DATETIME_FORMAT } from '../constants';
 
 // Format date
 export const formatDate = (date, formatStr = DATE_FORMAT) => {

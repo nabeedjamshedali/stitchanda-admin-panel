@@ -6,6 +6,7 @@ import {
   getDoc,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -189,8 +190,8 @@ export const approveTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      status: 'approved',
-      approvedAt: serverTimestamp()
+      is_verified: true,  // Actual DB field
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error approving tailor:', error);
@@ -202,8 +203,8 @@ export const rejectTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      status: 'rejected',
-      rejectedAt: serverTimestamp()
+      is_verified: false,  // Actual DB field
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error rejecting tailor:', error);
@@ -215,8 +216,9 @@ export const suspendTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      status: 'suspended',
-      suspendedAt: serverTimestamp()
+      is_verified: false,  // Suspend means not verified
+      availibility_status: false,  // Also mark as unavailable (note the typo in DB)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error suspending tailor:', error);
@@ -228,8 +230,9 @@ export const activateTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      status: 'active',
-      activatedAt: serverTimestamp()
+      is_verified: true,  // Actual DB field
+      availibility_status: true,  // Mark as available (note the typo in DB)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error activating tailor:', error);
@@ -303,7 +306,8 @@ export const addRider = async (data) => {
       createdAt: serverTimestamp(),
       rating: 0,
       totalDeliveries: 0,
-      currentlyAvailable: true
+      is_assigned: 0,          // PDF Rule: Driver availability (0 = not assigned, 1 = assigned)
+      availability_status: 1   // PDF Rule: Driver availability (0 = unavailable, 1 = available)
     });
     return docRef.id;
   } catch (error) {
@@ -329,8 +333,8 @@ export const approveRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      status: 'approved',
-      approvedAt: serverTimestamp()
+      verification_status: 1,  // Actual DB field (1 = verified)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error approving rider:', error);
@@ -342,8 +346,8 @@ export const rejectRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      status: 'rejected',
-      rejectedAt: serverTimestamp()
+      verification_status: 0,  // Actual DB field (0 = not verified)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error rejecting rider:', error);
@@ -355,8 +359,9 @@ export const suspendRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      status: 'suspended',
-      suspendedAt: serverTimestamp()
+      verification_status: 0,  // Suspend means not verified
+      availiability_status: 0,  // Also mark as unavailable (note the typo in DB)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error suspending rider:', error);
@@ -368,8 +373,9 @@ export const activateRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      status: 'active',
-      activatedAt: serverTimestamp()
+      verification_status: 1,  // Actual DB field (1 = verified)
+      availiability_status: 1,  // Mark as available (note the typo in DB)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error activating rider:', error);
@@ -425,18 +431,23 @@ export const getOrder = async (id) => {
 
 export const addOrder = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, 'order'), {
+    // Create a new doc reference to get the auto ID
+    const orderRef = doc(collection(db, 'order'));
+    const orderId = orderRef.id;
+
+    // Set the document with the ID matching order_id (matches actual DB schema)
+    await setDoc(orderRef, {
       ...data,
-      status: 'pending',
-      paymentStatus: 'pending',
-      createdAt: serverTimestamp(),
-      timeline: [{
-        status: 'pending',
-        timestamp: new Date(),
-        description: 'Order created'
-      }]
+      order_id: orderId,           // Match docid with order_id field
+      status: 0,                   // New orders have status 0 (unassigned)
+      rider_id: '',                // Empty string for unassigned rider (as per actual DB)
+      payment_status: 'Pending',   // Capital P to match actual DB
+      delivery_date: null,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
     });
-    return docRef.id;
+
+    return orderId;
   } catch (error) {
     console.error('Error adding order:', error);
     throw error;
@@ -456,22 +467,12 @@ export const updateOrder = async (id, data) => {
   }
 };
 
-export const updateOrderStatus = async (id, status, description = '') => {
+export const updateOrderStatus = async (id, status) => {
   try {
-    const order = await getOrder(id);
-    const timeline = order.timeline || [];
-
-    timeline.push({
-      status,
-      timestamp: new Date(),
-      description: description || `Order status updated to ${status}`
-    });
-
     const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
-      status,
-      timeline,
-      updatedAt: serverTimestamp()
+      status,  // Numeric status value (0-11)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -479,24 +480,13 @@ export const updateOrderStatus = async (id, status, description = '') => {
   }
 };
 
-export const assignTailor = async (orderId, tailorId, tailorName) => {
+export const assignTailor = async (orderId, tailorId) => {
   try {
-    const order = await getOrder(orderId);
-    const timeline = order.timeline || [];
-
-    timeline.push({
-      status: 'assigned',
-      timestamp: new Date(),
-      description: `Tailor ${tailorName} assigned to order`
-    });
-
     const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
-      tailorId,
-      tailorName,
-      status: 'assigned',
-      assignedAt: serverTimestamp(),
-      timeline
+      tailor_id: tailorId,  // Use snake_case to match DB schema
+      status: 4,  // RECEIVED_TAILOR status
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error assigning tailor:', error);
@@ -504,23 +494,13 @@ export const assignTailor = async (orderId, tailorId, tailorName) => {
   }
 };
 
-export const assignRider = async (orderId, riderId, riderName, stage = 'pickup') => {
+export const assignRider = async (orderId, riderId) => {
   try {
-    const order = await getOrder(orderId);
-    const timeline = order.timeline || [];
-
-    timeline.push({
-      status: stage === 'pickup' ? 'pickup_scheduled' : 'delivery_scheduled',
-      timestamp: new Date(),
-      description: `Rider ${riderName} assigned for ${stage}`
-    });
-
     const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
-      riderId,
-      riderName,
-      timeline,
-      updatedAt: serverTimestamp()
+      rider_id: riderId,  // Use snake_case to match DB schema
+      status: 1,  // ASSIGNED_RIDER status
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error assigning rider:', error);
@@ -528,23 +508,12 @@ export const assignRider = async (orderId, riderId, riderName, stage = 'pickup')
   }
 };
 
-export const cancelOrder = async (id, reason = '') => {
+export const cancelOrder = async (id) => {
   try {
-    const order = await getOrder(id);
-    const timeline = order.timeline || [];
-
-    timeline.push({
-      status: 'cancelled',
-      timestamp: new Date(),
-      description: reason || 'Order cancelled'
-    });
-
     const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
-      status: 'cancelled',
-      cancelledAt: serverTimestamp(),
-      cancelReason: reason,
-      timeline
+      status: -2,  // CANCELLED status (numeric)
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error cancelling order:', error);
@@ -588,29 +557,115 @@ export const getPaymentsByOrder = async (orderId) => {
 
 export const listenToTailors = (callback) => {
   return onSnapshot(collection(db, 'tailor'), (snapshot) => {
-    const tailors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const tailors = snapshot.docs.map(doc => {
+      const data = doc.data();
+
+      // Determine status based on is_verified and availibility_status
+      let status = 'pending';
+      if (data.is_verified === true) {
+        status = data.availibility_status === true ? 'active' : 'suspended';
+      } else if (data.is_verified === false) {
+        // Check if it was explicitly rejected or just pending
+        status = data.updated_at ? 'rejected' : 'pending';
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        // Map DB fields to UI-expected fields
+        specialization: data.category || [],  // Map category to specialization
+        skills: data.category || [],  // Use category as skills too
+        status: status,  // Derived from is_verified and availibility_status
+        rating: data.review || 0,  // Map review to rating
+        totalOrders: data.totalOrders || 0,
+        totalEarnings: data.totalEarnings || 0,
+        address: typeof data.address === 'object' ? data.address.full_address : data.address
+      };
+    });
     callback(tailors);
   });
 };
 
 export const listenToRiders = (callback) => {
   return onSnapshot(collection(db, 'driver'), (snapshot) => {
-    const riders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const riders = snapshot.docs.map(doc => {
+      const data = doc.data();
+
+      // Determine status based on verification_status and availiability_status
+      let status = 'pending';
+      if (data.verification_status === 1) {
+        status = data.availiability_status === 1 ? 'active' : 'suspended';
+      } else if (data.verification_status === 0) {
+        // Check if it was explicitly rejected or just pending
+        status = data.updated_at ? 'rejected' : 'pending';
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        // Map DB fields to UI-expected fields
+        currentlyAvailable: data.availiability_status === 1,  // Note: typo in DB field name
+        status: status,  // Derived from verification_status and availiability_status
+        rating: data.review || 0,  // Use review field if rating doesn't exist
+        totalDeliveries: data.totalDeliveries || 0
+      };
+    });
     callback(riders);
   });
 };
 
 export const listenToOrders = (callback) => {
-  return onSnapshot(collection(db, 'order'), (snapshot) => {
+  return onSnapshot(collection(db, 'order'), async (snapshot) => {
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(orders);
+
+    // Fetch all customers, tailors, and drivers to enrich orders with names
+    const [customers, tailors, drivers] = await Promise.all([
+      getCustomers(),
+      getTailors(),
+      getRiders()
+    ]);
+
+    // Create lookup maps for quick access
+    const customerMap = Object.fromEntries(customers.map(c => [c.customerId || c.id, c.name]));
+    const tailorMap = Object.fromEntries(tailors.map(t => [t.tailor_id || t.id, t.name]));
+    const driverMap = Object.fromEntries(drivers.map(d => [d.driver_id || d.id, d.name]));
+
+    // Enrich orders with names from related collections
+    const enrichedOrders = orders.map(order => ({
+      ...order,
+      customerName: customerMap[order.customer_id] || 'Unknown Customer',
+      tailorName: order.tailor_id ? (tailorMap[order.tailor_id] || 'Unknown Tailor') : null,
+      riderName: order.rider_id ? (driverMap[order.rider_id] || 'Unknown Rider') : null
+    }));
+
+    callback(enrichedOrders);
   });
 };
 
 export const listenToCustomers = (callback) => {
-  return onSnapshot(collection(db, 'customer'), (snapshot) => {
+  return onSnapshot(collection(db, 'customer'), async (snapshot) => {
     const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(customers);
+
+    // Calculate totalOrders and totalSpent for each customer from orders
+    const orders = await getOrders();
+
+    const enrichedCustomers = customers.map(customer => {
+      // Match using customerId field from DB, fallback to doc id
+      const customerId = customer.customerId || customer.id;
+      const customerOrders = orders.filter(order => order.customer_id === customerId);
+      const totalOrders = customerOrders.length;
+      const totalSpent = customerOrders
+        .filter(order => order.payment_status?.toLowerCase() === 'paid')
+        .reduce((sum, order) => sum + (order.total_price || 0), 0);
+
+      return {
+        ...customer,
+        totalOrders,
+        totalSpent
+      };
+    });
+
+    callback(enrichedCustomers);
   });
 };
 
@@ -628,6 +683,51 @@ export const listenToPendingRiders = (callback) => {
     const pendingRiders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(pendingRiders);
   });
+};
+
+export const listenToPayments = (callback) => {
+  return onSnapshot(collection(db, 'payments'), (snapshot) => {
+    const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(payments);
+  });
+};
+
+// ==================== ADMIN AUTHENTICATION ====================
+
+export const getAdminByUsername = async (username) => {
+  try {
+    const q = query(collection(db, 'admin'), where('username', '==', username));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting admin:', error);
+    throw error;
+  }
+};
+
+export const verifyAdminCredentials = async (username, password) => {
+  try {
+    const admin = await getAdminByUsername(username);
+    if (!admin) {
+      return { success: false, message: 'Invalid credentials' };
+    }
+
+    // Direct password comparison (you may want to use hashing in production)
+    if (admin.password === password) {
+      // Return admin data without password
+      const { password: _, ...adminData } = admin;
+      return { success: true, admin: adminData };
+    }
+
+    return { success: false, message: 'Invalid credentials' };
+  } catch (error) {
+    console.error('Error verifying admin credentials:', error);
+    return { success: false, message: 'Authentication error' };
+  }
 };
 
 // ==================== ANALYTICS & STATISTICS ====================

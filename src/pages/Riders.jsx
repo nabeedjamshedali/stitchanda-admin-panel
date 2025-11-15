@@ -21,10 +21,10 @@ import {
   suspendRider,
   activateRider,
   listenToRiders,
-} from '../services/firebase';
+} from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../utils/constants';
+import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
 
 const Riders = () => {
   const [riders, setRiders] = useState([]);
@@ -44,9 +44,6 @@ const Riders = () => {
     name: '',
     email: '',
     phone: '',
-    vehicleType: '',
-    vehicleNumber: '',
-    licenseNumber: '',
   });
 
   const { execute, loading: actionLoading } = useAsyncOperation();
@@ -82,9 +79,6 @@ const Riders = () => {
       name: '',
       email: '',
       phone: '',
-      vehicleType: '',
-      vehicleNumber: '',
-      licenseNumber: '',
     });
     setShowAddModal(true);
   };
@@ -95,9 +89,6 @@ const Riders = () => {
       name: rider.name || '',
       email: rider.email || '',
       phone: rider.phone || '',
-      vehicleType: rider.vehicleType || '',
-      vehicleNumber: rider.vehicleNumber || '',
-      licenseNumber: rider.licenseNumber || '',
     });
     setShowEditModal(true);
   };
@@ -186,8 +177,8 @@ const Riders = () => {
       accessor: 'phone',
     },
     {
-      header: 'Vehicle',
-      render: (row) => `${row.vehicleType} (${row.vehicleNumber})`,
+      header: 'CNIC',
+      render: (row) => row.cnic_image_path ? 'Uploaded' : 'Not uploaded',
     },
     {
       header: 'Status',
@@ -406,26 +397,6 @@ const Riders = () => {
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               required
             />
-            <Input
-              label="Vehicle Type"
-              value={formData.vehicleType}
-              onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
-              placeholder="e.g. Motorcycle, Car"
-              required
-            />
-            <Input
-              label="Vehicle Number"
-              value={formData.vehicleNumber}
-              onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value })}
-              placeholder="e.g. ABC-123"
-              required
-            />
-            <Input
-              label="License Number"
-              value={formData.licenseNumber}
-              onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-              required
-            />
             <div className="flex justify-end space-x-3 pt-4">
               <Button
                 type="button"
@@ -473,16 +444,16 @@ const Riders = () => {
                 <p className="text-gray-900">{selectedRider.phone}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
-                <p className="text-gray-900">{selectedRider.vehicleType}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Driver ID</label>
+                <p className="text-gray-900">{selectedRider.driver_id || 'N/A'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
-                <p className="text-gray-900">{selectedRider.vehicleNumber}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Verification Status</label>
+                <p className="text-gray-900">{selectedRider.verification_status === 1 ? 'Verified' : 'Not Verified'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
-                <p className="text-gray-900">{selectedRider.licenseNumber}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assignment Status</label>
+                <p className="text-gray-900">{selectedRider.is_assigned === 1 ? 'Assigned' : 'Not Assigned'}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -500,14 +471,12 @@ const Riders = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Joined Date</label>
-                <p className="text-gray-900">{formatDate(selectedRider.createdAt)}</p>
+                <p className="text-gray-900">{formatDate(selectedRider.created_at)}</p>
               </div>
-              {selectedRider.approvedAt && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Approved Date</label>
-                  <p className="text-gray-900">{formatDate(selectedRider.approvedAt)}</p>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
+                <p className="text-gray-900">{formatDate(selectedRider.updated_at)}</p>
+              </div>
             </div>
           )}
         </Modal>

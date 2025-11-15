@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -6,6 +5,7 @@ import {
   Scissors,
   Bike,
   ShoppingBag,
+  CreditCard,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -35,6 +35,11 @@ const Sidebar = () => {
       name: 'Orders',
       path: '/orders',
       icon: ShoppingBag,
+    },
+    {
+      name: 'Payments',
+      path: '/payments',
+      icon: CreditCard,
     },
   ];
 

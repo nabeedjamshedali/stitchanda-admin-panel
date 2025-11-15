@@ -22,7 +22,7 @@ import {
   getApprovedTailors,
   getActiveRiders,
   getCustomers,
-} from '../services/firebase';
+} from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, formatDateTime, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
 import {
@@ -30,7 +30,7 @@ import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_COLORS,
-} from '../utils/constants';
+} from '../constants';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -163,9 +163,8 @@ const Orders = () => {
 
   const handleSubmitAssignTailor = async (e) => {
     e.preventDefault();
-    const selectedTailor = tailors.find(t => t.id === assignData.tailorId);
     await execute(
-      () => assignTailor(selectedOrder.id, assignData.tailorId, selectedTailor?.name || 'Tailor'),
+      () => assignTailor(selectedOrder.id, assignData.tailorId),
       'Tailor assigned successfully'
     );
     setShowAssignTailorModal(false);
@@ -173,9 +172,8 @@ const Orders = () => {
 
   const handleSubmitAssignRider = async (e) => {
     e.preventDefault();
-    const selectedRider = riders.find(r => r.id === assignData.riderId);
     await execute(
-      () => assignRider(selectedOrder.id, assignData.riderId, selectedRider?.name || 'Rider'),
+      () => assignRider(selectedOrder.id, assignData.riderId),
       'Rider assigned successfully'
     );
     setShowAssignRiderModal(false);
@@ -225,7 +223,7 @@ const Orders = () => {
     },
     {
       header: 'Amount',
-      render: (row) => `PKR ${(row.totalAmount || 0).toLocaleString()}`,
+      render: (row) => `PKR ${(row.total_price || 0).toLocaleString()}`,
     },
     {
       header: 'Status',
@@ -239,7 +237,7 @@ const Orders = () => {
     },
     {
       header: 'Date',
-      render: (row) => formatDate(row.createdAt),
+      render: (row) => formatDate(row.created_at),
     },
     {
       header: 'Actions',
@@ -256,7 +254,7 @@ const Orders = () => {
           >
             View
           </Button>
-          {!row.tailorId && row.status === 'pending' && (
+          {!row.tailor_id && row.status === 0 && (
             <Button
               size="sm"
               variant="primary"
@@ -268,7 +266,7 @@ const Orders = () => {
               Assign Tailor
             </Button>
           )}
-          {row.tailorId && !row.riderId && (
+          {row.tailor_id && !row.rider_id && (
             <Button
               size="sm"
               variant="primary"
@@ -280,7 +278,7 @@ const Orders = () => {
               Assign Rider
             </Button>
           )}
-          {row.status !== 'cancelled' && row.status !== 'payment_completed' && (
+          {row.status !== -2 && row.status !== 10 && (
             <>
               <Button
                 size="sm"
@@ -535,38 +533,37 @@ const Orders = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
                 <p className="text-gray-900 text-lg font-semibold">
-                  PKR {(selectedOrder.totalAmount || 0).toLocaleString()}
+                  PKR {(selectedOrder.total_price || 0).toLocaleString()}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
                 <StatusBadge
-                  status={selectedOrder.paymentStatus || 'pending'}
-                  label={selectedOrder.paymentStatus || 'Pending'}
-                  colorClass={selectedOrder.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+                  status={selectedOrder.payment_status || 'Pending'}
+                  label={selectedOrder.payment_status || 'Pending'}
+                  colorClass={selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Timeline</label>
-                <div className="mt-2 space-y-2">
-                  {selectedOrder.timeline?.map((event, index) => (
-                    <div key={index} className="flex items-start space-x-2 text-sm">
-                      <div className="w-2 h-2 bg-primary-500 rounded-full mt-1.5"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{ORDER_STATUS_LABELS[event.status] || event.status}</p>
-                        <p className="text-gray-600">{event.description}</p>
-                        <p className="text-xs text-gray-400">{formatDateTime(event.timestamp)}</p>
-                      </div>
-                    </div>
-                  )) || <p className="text-gray-500">No timeline available</p>}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                <p className="text-gray-900">{selectedOrder.payment_method || 'N/A'}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
+                <p className="text-gray-900">{selectedOrder.pickup_location?.full_address || 'N/A'}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Location</label>
+                <p className="text-gray-900">{selectedOrder.dropoff_location?.full_address || 'N/A'}</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
-                <p className="text-gray-900">{formatDateTime(selectedOrder.createdAt)}</p>
+                <p className="text-gray-900">{formatDateTime(selectedOrder.created_at)}</p>
               </div>
             </div>
           )}

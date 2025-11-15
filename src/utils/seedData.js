@@ -3,7 +3,7 @@ import {
   addTailor,
   addRider,
   addOrder
-} from '../services/firebase';
+} from '../lib/firebase';
 
 export const seedSampleData = async () => {
   try {

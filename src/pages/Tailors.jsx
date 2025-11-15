@@ -21,10 +21,10 @@ import {
   suspendTailor,
   activateTailor,
   listenToTailors,
-} from '../services/firebase';
+} from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../utils/constants';
+import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
 import toast from 'react-hot-toast';
 
 const Tailors = () => {
@@ -511,23 +511,37 @@ const Tailors = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Skills
+                  Category
                 </label>
                 <p className="text-gray-900">
-                  {Array.isArray(selectedTailor.skills)
-                    ? selectedTailor.skills.join(', ')
+                  {Array.isArray(selectedTailor.category)
+                    ? selectedTailor.category.join(', ')
                     : 'N/A'}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Specialization
+                  Experience
                 </label>
-                <p className="text-gray-900">
-                  {Array.isArray(selectedTailor.specialization)
-                    ? selectedTailor.specialization.join(', ')
-                    : 'N/A'}
-                </p>
+                <p className="text-gray-900">{selectedTailor.experience || 0} years</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CNIC
+                </label>
+                <p className="text-gray-900">{selectedTailor.cnic || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gender
+                </label>
+                <p className="text-gray-900">{selectedTailor.gender || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Verified
+                </label>
+                <p className="text-gray-900">{selectedTailor.is_verified ? 'Yes' : 'No'}</p>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -555,16 +569,14 @@ const Tailors = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Joined Date
                 </label>
-                <p className="text-gray-900">{formatDate(selectedTailor.createdAt)}</p>
+                <p className="text-gray-900">{formatDate(selectedTailor.created_at)}</p>
               </div>
-              {selectedTailor.approvedAt && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Approved Date
-                  </label>
-                  <p className="text-gray-900">{formatDate(selectedTailor.approvedAt)}</p>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Updated
+                </label>
+                <p className="text-gray-900">{formatDate(selectedTailor.updated_at)}</p>
+              </div>
             </div>
           )}
         </Modal>
