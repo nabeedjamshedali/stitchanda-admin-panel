@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Table from '../components/shared/Table';
 import Button from '../components/shared/Button';
@@ -26,22 +27,23 @@ import {
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, formatDateTime, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
 import {
-  ITEMS_PER_PAGE,
+  DEFAULT_PAGE_SIZE,
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_COLORS,
 } from '../constants';
 
 const Orders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showAssignTailorModal, setShowAssignTailorModal] = useState(false);
   const [showAssignRiderModal, setShowAssignRiderModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
@@ -111,8 +113,13 @@ const Orders = () => {
     setCurrentPage(1);
   }, [orders, searchTerm, statusFilter]);
 
-  const paginatedOrders = paginate(filteredOrders, currentPage, ITEMS_PER_PAGE);
-  const totalPages = getTotalPages(filteredOrders.length, ITEMS_PER_PAGE);
+  const paginatedOrders = paginate(filteredOrders, currentPage, pageSize);
+  const totalPages = getTotalPages(filteredOrders.length, pageSize);
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   const handleAdd = () => {
     setFormData({ customerId: '', items: '', totalAmount: '' });
@@ -120,8 +127,7 @@ const Orders = () => {
   };
 
   const handleView = (order) => {
-    setSelectedOrder(order);
-    setShowViewModal(true);
+    navigate(`/orders/${order.id}`);
   };
 
   const handleAssignTailor = (order) => {
@@ -350,14 +356,19 @@ const Orders = () => {
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <Table columns={columns} data={paginatedOrders} />
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          <Table
+            columns={columns}
+            data={paginatedOrders}
+            onRowClick={(order) => navigate(`/orders/${order.id}`)}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={filteredOrders.length}
+          />
         </div>
 
         {/* Add Order Modal */}
@@ -481,92 +492,6 @@ const Orders = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-
-        {/* View Order Modal */}
-        <Modal
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title="Order Details"
-        >
-          {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
-                  <p className="text-gray-900">#{selectedOrder.id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <StatusBadge
-                    status={selectedOrder.status}
-                    label={ORDER_STATUS_LABELS[selectedOrder.status]}
-                    colorClass={ORDER_STATUS_COLORS[selectedOrder.status]}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                <p className="text-gray-900">{selectedOrder.customerName || 'N/A'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Tailor</label>
-                <p className="text-gray-900">{selectedOrder.tailorName || 'Not assigned yet'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Rider</label>
-                <p className="text-gray-900">{selectedOrder.riderName || 'Not assigned yet'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Items</label>
-                <ul className="list-disc list-inside text-gray-900">
-                  {selectedOrder.items?.map((item, index) => (
-                    <li key={index}>{item.name || item}</li>
-                  )) || <li>No items</li>}
-                </ul>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
-                <p className="text-gray-900 text-lg font-semibold">
-                  PKR {(selectedOrder.total_price || 0).toLocaleString()}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
-                <StatusBadge
-                  status={selectedOrder.payment_status || 'Pending'}
-                  label={selectedOrder.payment_status || 'Pending'}
-                  colorClass={selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                <p className="text-gray-900">{selectedOrder.payment_method || 'N/A'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
-                <p className="text-gray-900">{selectedOrder.pickup_location?.full_address || 'N/A'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Location</label>
-                <p className="text-gray-900">{selectedOrder.dropoff_location?.full_address || 'N/A'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
-                <p className="text-gray-900">{formatDateTime(selectedOrder.created_at)}</p>
-              </div>
-            </div>
-          )}
         </Modal>
 
         {/* Cancel Order Dialog */}

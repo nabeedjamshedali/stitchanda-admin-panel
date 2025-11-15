@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Table from '../components/shared/Table';
 import Button from '../components/shared/Button';
@@ -23,20 +24,21 @@ import {
   listenToRiders,
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
-import { formatDate, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
+import { filterBySearch, paginate, getTotalPages } from '../utils/helpers';
+import { DEFAULT_PAGE_SIZE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
 
 const Riders = () => {
+  const navigate = useNavigate();
   const [riders, setRiders] = useState([]);
   const [filteredRiders, setFilteredRiders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [selectedRider, setSelectedRider] = useState(null);
@@ -70,8 +72,14 @@ const Riders = () => {
     setCurrentPage(1);
   }, [riders, searchTerm, statusFilter]);
 
-  const paginatedRiders = paginate(filteredRiders, currentPage, ITEMS_PER_PAGE);
-  const totalPages = getTotalPages(filteredRiders.length, ITEMS_PER_PAGE);
+  const paginatedRiders = paginate(filteredRiders, currentPage, pageSize);
+  const totalPages = getTotalPages(filteredRiders.length, pageSize);
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
   const pendingCount = riders.filter(r => r.status === 'pending').length;
 
   const handleAdd = () => {
@@ -94,8 +102,7 @@ const Riders = () => {
   };
 
   const handleView = (rider) => {
-    setSelectedRider(rider);
-    setShowViewModal(true);
+    navigate(`/riders/${rider.id}`);
   };
 
   const handleDeleteClick = (rider) => {
@@ -358,14 +365,19 @@ const Riders = () => {
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <Table columns={columns} data={paginatedRiders} />
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          <Table
+            columns={columns}
+            data={paginatedRiders}
+            onRowClick={(rider) => navigate(`/riders/${rider.id}`)}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={filteredRiders.length}
+          />
         </div>
 
         {/* Add/Edit Modal */}
@@ -413,72 +425,6 @@ const Riders = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-
-        {/* View Modal */}
-        <Modal
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title="Rider Details"
-        >
-          {selectedRider && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <p className="text-gray-900">{selectedRider.name}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <StatusBadge
-                  status={selectedRider.status}
-                  label={USER_STATUS_LABELS[selectedRider.status]}
-                  colorClass={USER_STATUS_COLORS[selectedRider.status]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <p className="text-gray-900">{selectedRider.email}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <p className="text-gray-900">{selectedRider.phone}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Driver ID</label>
-                <p className="text-gray-900">{selectedRider.driver_id || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Verification Status</label>
-                <p className="text-gray-900">{selectedRider.verification_status === 1 ? 'Verified' : 'Not Verified'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assignment Status</label>
-                <p className="text-gray-900">{selectedRider.is_assigned === 1 ? 'Assigned' : 'Not Assigned'}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Deliveries</label>
-                  <p className="text-gray-900">{selectedRider.totalDeliveries || 0}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                  <p className="text-gray-900">{(selectedRider.rating || 0).toFixed(1)} ⭐</p>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Currently Available</label>
-                <p className="text-gray-900">{selectedRider.currentlyAvailable ? 'Yes' : 'No'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Joined Date</label>
-                <p className="text-gray-900">{formatDate(selectedRider.created_at)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-                <p className="text-gray-900">{formatDate(selectedRider.updated_at)}</p>
-              </div>
-            </div>
-          )}
         </Modal>
 
         {/* Delete Confirmation */}

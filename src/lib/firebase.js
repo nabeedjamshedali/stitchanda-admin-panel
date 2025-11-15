@@ -60,6 +60,39 @@ export const getCustomer = async (id) => {
   }
 };
 
+export const getCustomerById = async (id) => {
+  try {
+    const docRef = doc(db, 'customer', id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const customer = { id: docSnap.id, ...docSnap.data() };
+
+    // Fetch orders to calculate totalOrders and totalSpent
+    const orders = await getOrders();
+    const customerId = customer.customerId || customer.id;
+    const customerOrders = orders.filter(order => order.customer_id === customerId);
+
+    const totalOrders = customerOrders.length;
+    const totalSpent = customerOrders
+      .filter(order => order.payment_status?.toLowerCase() === 'paid')
+      .reduce((sum, order) => sum + (order.total_price || 0), 0);
+
+    return {
+      ...customer,
+      totalOrders,
+      totalSpent,
+      orders: customerOrders // Include orders for history section
+    };
+  } catch (error) {
+    console.error('Error getting customer by ID:', error);
+    throw error;
+  }
+};
+
 export const addCustomer = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'customer'), {
@@ -152,6 +185,52 @@ export const getTailor = async (id) => {
     return null;
   } catch (error) {
     console.error('Error getting tailor:', error);
+    throw error;
+  }
+};
+
+export const getTailorById = async (id) => {
+  try {
+    const docRef = doc(db, 'tailor', id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const tailor = { id: docSnap.id, ...docSnap.data() };
+
+    // Fetch orders to calculate stats
+    const orders = await getOrders();
+    const tailorId = tailor.tailor_id || tailor.id;
+    const tailorOrders = orders.filter(order => order.tailor_id === tailorId);
+
+    const totalOrders = tailorOrders.length;
+    const totalEarnings = tailorOrders
+      .filter(order => order.payment_status?.toLowerCase() === 'paid')
+      .reduce((sum, order) => sum + (order.total_price || 0), 0);
+
+    // Determine status from DB fields
+    let status = 'pending';
+    if (tailor.is_verified === true) {
+      status = tailor.availibility_status === true ? 'active' : 'suspended';
+    } else if (tailor.is_verified === false) {
+      status = tailor.updated_at ? 'rejected' : 'pending';
+    }
+
+    return {
+      ...tailor,
+      status,
+      specialization: tailor.category || [],
+      skills: tailor.category || [],
+      rating: tailor.review || 0,
+      totalOrders,
+      totalEarnings,
+      orders: tailorOrders,
+      address: typeof tailor.address === 'object' ? tailor.address.full_address : tailor.address
+    };
+  } catch (error) {
+    console.error('Error getting tailor by ID:', error);
     throw error;
   }
 };
@@ -298,6 +377,48 @@ export const getRider = async (id) => {
   }
 };
 
+export const getRiderById = async (id) => {
+  try {
+    const docRef = doc(db, 'driver', id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const rider = { id: docSnap.id, ...docSnap.data() };
+
+    // Fetch orders to calculate delivery stats
+    const orders = await getOrders();
+    const riderId = rider.driver_id || rider.id;
+    const riderOrders = orders.filter(order => order.rider_id === riderId);
+
+    const totalDeliveries = riderOrders.length;
+    const completedDeliveries = riderOrders.filter(order => order.status === 10).length;
+
+    // Determine status from DB fields
+    let status = 'pending';
+    if (rider.verification_status === 1) {
+      status = rider.availiability_status === 1 ? 'active' : 'suspended';
+    } else if (rider.verification_status === 0) {
+      status = rider.updated_at ? 'rejected' : 'pending';
+    }
+
+    return {
+      ...rider,
+      status,
+      rating: rider.rating || 0,
+      totalDeliveries,
+      completedDeliveries,
+      currentlyAvailable: rider.currentlyAvailable || false,
+      orders: riderOrders
+    };
+  } catch (error) {
+    console.error('Error getting rider by ID:', error);
+    throw error;
+  }
+};
+
 export const addRider = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'driver'), {
@@ -425,6 +546,42 @@ export const getOrder = async (id) => {
     return null;
   } catch (error) {
     console.error('Error getting order:', error);
+    throw error;
+  }
+};
+
+export const getOrderById = async (id) => {
+  try {
+    const docRef = doc(db, 'order', id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const order = { id: docSnap.id, ...docSnap.data() };
+
+    // Fetch related entities to enrich order data
+    const [customers, tailors, drivers] = await Promise.all([
+      getCustomers(),
+      getTailors(),
+      getRiders()
+    ]);
+
+    // Create lookup maps
+    const customerMap = Object.fromEntries(customers.map(c => [c.customerId || c.id, c.name]));
+    const tailorMap = Object.fromEntries(tailors.map(t => [t.tailor_id || t.id, t.name]));
+    const driverMap = Object.fromEntries(drivers.map(d => [d.driver_id || d.id, d.name]));
+
+    // Enrich order with names
+    return {
+      ...order,
+      customerName: customerMap[order.customer_id] || 'Unknown Customer',
+      tailorName: order.tailor_id ? (tailorMap[order.tailor_id] || 'Unknown Tailor') : null,
+      riderName: order.rider_id ? (driverMap[order.rider_id] || 'Unknown Rider') : null
+    };
+  } catch (error) {
+    console.error('Error getting order by ID:', error);
     throw error;
   }
 };

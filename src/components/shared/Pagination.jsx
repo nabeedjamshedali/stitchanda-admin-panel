@@ -1,8 +1,14 @@
-import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  pageSize = 10,
+  onPageSizeChange,
+  totalItems = 0
+}) => {
   const pages = [];
 
   // Generate page numbers
@@ -18,9 +24,14 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     }
   }
 
+  // Calculate range display
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
+
   return (
-    <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-      <div className="flex-1 flex justify-between sm:hidden">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 sm:px-6 border-t border-gray-200">
+      {/* Mobile view */}
+      <div className="flex-1 flex justify-between sm:hidden w-full">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
@@ -36,13 +47,38 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           Next
         </button>
       </div>
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
+
+      {/* Desktop view */}
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between w-full">
+        {/* Left section: Items count and page size selector */}
+        <div className="flex items-center gap-4">
           <p className="text-sm text-gray-700">
-            Page <span className="font-medium">{currentPage}</span> of{' '}
-            <span className="font-medium">{totalPages}</span>
+            Showing <span className="font-medium">{startItem}</span> to{' '}
+            <span className="font-medium">{endItem}</span> of{' '}
+            <span className="font-medium">{totalItems}</span> results
           </p>
+
+          {onPageSizeChange && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="pageSize" className="text-sm text-gray-700">
+                Rows per page:
+              </label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="block rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          )}
         </div>
+
+        {/* Right section: Page navigation */}
         <div>
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
             <button

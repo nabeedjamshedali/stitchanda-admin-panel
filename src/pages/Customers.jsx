@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Table from '../components/shared/Table';
 import Button from '../components/shared/Button';
@@ -17,14 +18,16 @@ import {
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE } from '../constants';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 const Customers = () => {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Filter states
   const [genderFilter, setGenderFilter] = useState('all');
@@ -33,7 +36,6 @@ const Customers = () => {
 
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -90,8 +92,13 @@ const Customers = () => {
   }, [customers, searchTerm, genderFilter, orderRangeFilter, spentRangeFilter]);
 
   // Paginated data
-  const paginatedCustomers = paginate(filteredCustomers, currentPage, ITEMS_PER_PAGE);
-  const totalPages = getTotalPages(filteredCustomers.length, ITEMS_PER_PAGE);
+  const paginatedCustomers = paginate(filteredCustomers, currentPage, pageSize);
+  const totalPages = getTotalPages(filteredCustomers.length, pageSize);
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   const handleEdit = (customer) => {
     setSelectedCustomer(customer);
@@ -105,8 +112,7 @@ const Customers = () => {
   };
 
   const handleView = (customer) => {
-    setSelectedCustomer(customer);
-    setShowViewModal(true);
+    navigate(`/customers/${customer.id}`);
   };
 
   const handleDeleteClick = (customer) => {
@@ -287,14 +293,19 @@ const Customers = () => {
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <Table columns={columns} data={paginatedCustomers} />
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          <Table
+            columns={columns}
+            data={paginatedCustomers}
+            onRowClick={(customer) => navigate(`/customers/${customer.id}`)}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={filteredCustomers.length}
+          />
         </div>
 
         {/* Edit Modal */}
@@ -350,121 +361,6 @@ const Customers = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-
-        {/* View Modal */}
-        <Modal
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title="Customer Details"
-        >
-          {selectedCustomer && (
-            <div className="space-y-4">
-              {/* Profile Image */}
-              {selectedCustomer.profileImagePath && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Picture
-                  </label>
-                  <img
-                    src={selectedCustomer.profileImagePath}
-                    alt={selectedCustomer.name}
-                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name
-                  </label>
-                  <p className="text-gray-900">{selectedCustomer.name}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <p className="text-gray-900">{selectedCustomer.gender || 'N/A'}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <p className="text-gray-900">{selectedCustomer.email}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <p className="text-gray-900">{selectedCustomer.phone}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer ID
-                </label>
-                <p className="text-gray-900 text-sm font-mono">{selectedCustomer.customerId || selectedCustomer.id}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Address
-                </label>
-                <p className="text-gray-900">
-                  {selectedCustomer.address?.fullAddress || selectedCustomer.address || 'N/A'}
-                </p>
-                {selectedCustomer.address?.latitude && selectedCustomer.address?.longitude && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Coordinates: {selectedCustomer.address.latitude}, {selectedCustomer.address.longitude}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total Orders
-                  </label>
-                  <p className="text-gray-900 text-lg font-semibold">{selectedCustomer.totalOrders || 0}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total Spent
-                  </label>
-                  <p className="text-gray-900 text-lg font-semibold">
-                    PKR {(selectedCustomer.totalSpent || 0).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rating
-                  </label>
-                  <p className="text-gray-900 text-lg font-semibold">
-                    {selectedCustomer.review || 0} ⭐
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Joined Date
-                  </label>
-                  <p className="text-gray-900">{formatDate(selectedCustomer.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Updated
-                  </label>
-                  <p className="text-gray-900">{formatDate(selectedCustomer.updatedAt)}</p>
-                </div>
-              </div>
-            </div>
-          )}
         </Modal>
 
         {/* Delete Confirmation */}

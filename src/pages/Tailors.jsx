@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Table from '../components/shared/Table';
 import Button from '../components/shared/Button';
@@ -24,21 +25,22 @@ import {
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
+import { DEFAULT_PAGE_SIZE, USER_STATUSES, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../constants';
 import toast from 'react-hot-toast';
 
 const Tailors = () => {
+  const navigate = useNavigate();
   const [tailors, setTailors] = useState([]);
   const [filteredTailors, setFilteredTailors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [selectedTailor, setSelectedTailor] = useState(null);
@@ -80,8 +82,13 @@ const Tailors = () => {
   }, [tailors, searchTerm, statusFilter]);
 
   // Paginated data
-  const paginatedTailors = paginate(filteredTailors, currentPage, ITEMS_PER_PAGE);
-  const totalPages = getTotalPages(filteredTailors.length, ITEMS_PER_PAGE);
+  const paginatedTailors = paginate(filteredTailors, currentPage, pageSize);
+  const totalPages = getTotalPages(filteredTailors.length, pageSize);
+
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   // Count pending tailors
   const pendingCount = tailors.filter(t => t.status === 'pending').length;
@@ -114,8 +121,7 @@ const Tailors = () => {
   };
 
   const handleView = (tailor) => {
-    setSelectedTailor(tailor);
-    setShowViewModal(true);
+    navigate(`/tailors/${tailor.id}`);
   };
 
   const handleDeleteClick = (tailor) => {
@@ -392,14 +398,19 @@ const Tailors = () => {
 
         {/* Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <Table columns={columns} data={paginatedTailors} />
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          <Table
+            columns={columns}
+            data={paginatedTailors}
+            onRowClick={(tailor) => navigate(`/tailors/${tailor.id}`)}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={filteredTailors.length}
+          />
         </div>
 
         {/* Add/Edit Modal */}
@@ -465,120 +476,6 @@ const Tailors = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-
-        {/* View Modal */}
-        <Modal
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title="Tailor Details"
-        >
-          {selectedTailor && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <p className="text-gray-900">{selectedTailor.name}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <StatusBadge
-                  status={selectedTailor.status}
-                  label={USER_STATUS_LABELS[selectedTailor.status]}
-                  colorClass={USER_STATUS_COLORS[selectedTailor.status]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <p className="text-gray-900">{selectedTailor.email}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <p className="text-gray-900">{selectedTailor.phone}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address
-                </label>
-                <p className="text-gray-900">{selectedTailor.address}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <p className="text-gray-900">
-                  {Array.isArray(selectedTailor.category)
-                    ? selectedTailor.category.join(', ')
-                    : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Experience
-                </label>
-                <p className="text-gray-900">{selectedTailor.experience || 0} years</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CNIC
-                </label>
-                <p className="text-gray-900">{selectedTailor.cnic || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender
-                </label>
-                <p className="text-gray-900">{selectedTailor.gender || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Verified
-                </label>
-                <p className="text-gray-900">{selectedTailor.is_verified ? 'Yes' : 'No'}</p>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total Orders
-                  </label>
-                  <p className="text-gray-900">{selectedTailor.totalOrders || 0}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Earnings
-                  </label>
-                  <p className="text-gray-900">
-                    PKR {(selectedTailor.totalEarnings || 0).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rating
-                  </label>
-                  <p className="text-gray-900">{(selectedTailor.rating || 0).toFixed(1)} ⭐</p>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Joined Date
-                </label>
-                <p className="text-gray-900">{formatDate(selectedTailor.created_at)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Updated
-                </label>
-                <p className="text-gray-900">{formatDate(selectedTailor.updated_at)}</p>
-              </div>
-            </div>
-          )}
         </Modal>
 
         {/* Delete Confirmation */}

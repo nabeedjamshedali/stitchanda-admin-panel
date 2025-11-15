@@ -96,6 +96,8 @@ export const PAYMENT_STATUS_COLORS = {
 
 // Pagination
 export const ITEMS_PER_PAGE = 10;
+export const DEFAULT_PAGE_SIZE = 10;
+export const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 // Date Formats
 export const DATE_FORMAT = 'MMM dd, yyyy';
