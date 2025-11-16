@@ -7,6 +7,7 @@ import StatusBadge from '../components/shared/StatusBadge';
 import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
 import Table from '../components/shared/Table';
+import StatusUpdateModal from '../components/shared/StatusUpdateModal';
 import { Card, CardHeader, CardTitle, CardContent, InfoRow } from '../components/shared/Card';
 import {
   ArrowLeft,
@@ -17,11 +18,7 @@ import {
   Calendar,
   Edit,
   Trash2,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Ban,
-  PlayCircle
+  AlertCircle
 } from 'lucide-react';
 import {
   getTailorById,
@@ -45,6 +42,7 @@ const TailorDetails = () => {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -103,40 +101,36 @@ const TailorDetails = () => {
     navigate('/tailors');
   };
 
-  const handleApprove = async () => {
-    await execute(
-      () => approveTailor(tailor.id),
-      `${tailor.name} has been approved`
-    );
-    const updated = await getTailorById(id);
-    setTailor(updated);
+  const handleStatusUpdate = async (formData) => {
+    const statusMap = {
+      'approved': approveTailor,
+      'rejected': rejectTailor,
+      'suspended': suspendTailor,
+      'active': activateTailor,
+    };
+
+    const updateFunction = statusMap[formData.status];
+    if (updateFunction) {
+      await execute(
+        () => updateFunction(tailor.id),
+        `Tailor status updated to ${formData.status}`
+      );
+      setShowStatusModal(false);
+      const updated = await getTailorById(id);
+      setTailor(updated);
+    }
   };
 
-  const handleReject = async () => {
-    await execute(
-      () => rejectTailor(tailor.id),
-      `${tailor.name} has been rejected`
-    );
-    const updated = await getTailorById(id);
-    setTailor(updated);
-  };
+  const getStatusOptions = () => {
+    const allOptions = [
+      { value: 'approved', label: 'Approved' },
+      { value: 'rejected', label: 'Rejected' },
+      { value: 'suspended', label: 'Suspended' },
+      { value: 'active', label: 'Active' },
+    ];
 
-  const handleSuspend = async () => {
-    await execute(
-      () => suspendTailor(tailor.id),
-      `${tailor.name} has been suspended`
-    );
-    const updated = await getTailorById(id);
-    setTailor(updated);
-  };
-
-  const handleActivate = async () => {
-    await execute(
-      () => activateTailor(tailor.id),
-      `${tailor.name} has been activated`
-    );
-    const updated = await getTailorById(id);
-    setTailor(updated);
+    // Filter out current status
+    return allOptions.filter(opt => opt.value !== tailor.status);
   };
 
   if (loading) {
@@ -213,26 +207,12 @@ const TailorDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            {tailor.status === 'pending' && (
-              <>
-                <Button variant="ghost" icon={CheckCircle} onClick={handleApprove} className="text-green-600">
-                  Approve
-                </Button>
-                <Button variant="ghost" icon={XCircle} onClick={handleReject} className="text-red-600">
-                  Reject
-                </Button>
-              </>
-            )}
-            {(tailor.status === 'approved' || tailor.status === 'active') && (
-              <Button variant="ghost" icon={Ban} onClick={handleSuspend} className="text-orange-600">
-                Suspend
-              </Button>
-            )}
-            {tailor.status === 'suspended' && (
-              <Button variant="ghost" icon={PlayCircle} onClick={handleActivate} className="text-green-600">
-                Activate
-              </Button>
-            )}
+            <Button
+              className="bg-[#6B4423] hover:bg-[#8D6A4F] text-white"
+              onClick={() => setShowStatusModal(true)}
+            >
+              Update Status
+            </Button>
             <Button variant="ghost" icon={Edit} onClick={handleEdit}>
               Edit
             </Button>
@@ -398,6 +378,17 @@ const TailorDetails = () => {
             </div>
           </form>
         </Modal>
+
+        {/* Status Update Modal */}
+        <StatusUpdateModal
+          isOpen={showStatusModal}
+          onClose={() => setShowStatusModal(false)}
+          onSubmit={handleStatusUpdate}
+          title="Update Tailor Status"
+          statusOptions={getStatusOptions()}
+          currentStatus={tailor.status}
+          loading={actionLoading}
+        />
 
         {/* Delete Confirmation */}
         <Modal

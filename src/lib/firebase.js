@@ -866,9 +866,29 @@ export const getAdminByUsername = async (username) => {
   }
 };
 
-export const verifyAdminCredentials = async (username, password) => {
+export const getAdminByEmail = async (email) => {
   try {
-    const admin = await getAdminByUsername(username);
+    const q = query(collection(db, 'admin'), where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting admin by email:', error);
+    throw error;
+  }
+};
+
+export const verifyAdminCredentials = async (emailOrUsername, password) => {
+  try {
+    // Try to find admin by email first, then by username
+    let admin = await getAdminByEmail(emailOrUsername);
+    if (!admin) {
+      admin = await getAdminByUsername(emailOrUsername);
+    }
+
     if (!admin) {
       return { success: false, message: 'Invalid credentials' };
     }

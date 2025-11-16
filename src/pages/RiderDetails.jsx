@@ -7,6 +7,7 @@ import StatusBadge from '../components/shared/StatusBadge';
 import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
 import Table from '../components/shared/Table';
+import StatusUpdateModal from '../components/shared/StatusUpdateModal';
 import { Card, CardHeader, CardTitle, CardContent, InfoRow } from '../components/shared/Card';
 import {
   ArrowLeft,
@@ -45,6 +46,7 @@ const RiderDetails = () => {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -139,6 +141,38 @@ const RiderDetails = () => {
     setRider(updated);
   };
 
+  const handleStatusUpdate = async (formData) => {
+    const statusMap = {
+      'approved': approveRider,
+      'rejected': rejectRider,
+      'suspended': suspendRider,
+      'active': activateRider,
+    };
+
+    const updateFunction = statusMap[formData.status];
+    if (updateFunction) {
+      await execute(
+        () => updateFunction(rider.id),
+        `Rider status updated to ${formData.status}`
+      );
+      setShowStatusModal(false);
+      const updated = await getRiderById(id);
+      setRider(updated);
+    }
+  };
+
+  const getStatusOptions = () => {
+    const allOptions = [
+      { value: 'approved', label: 'Approved' },
+      { value: 'rejected', label: 'Rejected' },
+      { value: 'suspended', label: 'Suspended' },
+      { value: 'active', label: 'Active' },
+    ];
+
+    // Filter out current status
+    return allOptions.filter(opt => opt.value !== rider.status);
+  };
+
   if (loading) {
     return (
       <Layout title="Rider Details">
@@ -215,26 +249,12 @@ const RiderDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            {rider.status === 'pending' && (
-              <>
-                <Button variant="ghost" icon={CheckCircle} onClick={handleApprove} className="text-green-600">
-                  Approve
-                </Button>
-                <Button variant="ghost" icon={XCircle} onClick={handleReject} className="text-red-600">
-                  Reject
-                </Button>
-              </>
-            )}
-            {(rider.status === 'approved' || rider.status === 'active') && (
-              <Button variant="ghost" icon={Ban} onClick={handleSuspend} className="text-orange-600">
-                Suspend
-              </Button>
-            )}
-            {rider.status === 'suspended' && (
-              <Button variant="ghost" icon={PlayCircle} onClick={handleActivate} className="text-green-600">
-                Activate
-              </Button>
-            )}
+            <Button
+              className="bg-[#6B4423] hover:bg-[#8D6A4F] text-white"
+              onClick={() => setShowStatusModal(true)}
+            >
+              Update Status
+            </Button>
             <Button variant="ghost" icon={Edit} onClick={handleEdit}>
               Edit
             </Button>
@@ -395,6 +415,17 @@ const RiderDetails = () => {
             </div>
           </form>
         </Modal>
+
+        {/* Status Update Modal */}
+        <StatusUpdateModal
+          isOpen={showStatusModal}
+          onClose={() => setShowStatusModal(false)}
+          onSubmit={handleStatusUpdate}
+          title="Update Rider Status"
+          statusOptions={getStatusOptions()}
+          currentStatus={rider.status}
+          loading={actionLoading}
+        />
 
         {/* Delete Confirmation */}
         <Modal
