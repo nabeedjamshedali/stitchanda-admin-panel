@@ -160,19 +160,19 @@ const Customers = () => {
   const columns = [
     {
       header: 'Name',
-      accessor: 'name',
+      render: (row) => row.name || '-',
     },
     {
       header: 'Email',
-      accessor: 'email',
+      render: (row) => row.email || '-',
     },
     {
       header: 'Phone',
-      accessor: 'phone',
+      render: (row) => row.phone || '-',
     },
     {
       header: 'Gender',
-      render: (row) => row.gender || 'N/A',
+      render: (row) => row.gender || '-',
     },
     {
       header: 'Total Orders',
@@ -184,7 +184,7 @@ const Customers = () => {
     },
     {
       header: 'Joined',
-      render: (row) => formatDate(row.createdAt),
+      render: (row) => row.createdAt ? formatDate(row.createdAt) : '-',
     },
     {
       header: 'Actions',

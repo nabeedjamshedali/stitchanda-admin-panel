@@ -15,6 +15,7 @@ import OrderDetails from './pages/OrderDetails';
 import CustomerDetails from './pages/CustomerDetails';
 import TailorDetails from './pages/TailorDetails';
 import RiderDetails from './pages/RiderDetails';
+import Messages from './pages/Messages';
 import Payments from './pages/Payments';
 
 function App() {
@@ -121,6 +122,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <Messages />
               </ProtectedRoute>
             }
           />

@@ -7,14 +7,16 @@ import Pagination from '../components/shared/Pagination';
 import Loading from '../components/shared/Loading';
 import StatusBadge from '../components/shared/StatusBadge';
 import Modal from '../components/shared/Modal';
-import { Eye, Download, DollarSign, CreditCard } from 'lucide-react';
-import { getPayments, listenToPayments } from '../lib/firebase';
-import { formatDate, formatDateTime, formatCurrency, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
-import { ITEMS_PER_PAGE, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from '../constants';
+import { Eye, Download, DollarSign, CreditCard, TrendingUp, AlertCircle } from 'lucide-react';
+import { getStripePayments, getPaymentStatistics } from '../lib/stripe';
+import { formatDate, formatDateTime, filterBySearch, paginate, getTotalPages } from '../utils/helpers';
+import { ITEMS_PER_PAGE } from '../constants';
+import toast from 'react-hot-toast';
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [filteredPayments, setFilteredPayments] = useState([]);
+  const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -22,14 +24,29 @@ const Payments = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  // Real-time listener for payments
+  // Fetch payments from Stripe
   useEffect(() => {
-    const unsubscribe = listenToPayments((data) => {
-      setPayments(data);
-      setLoading(false);
-    });
+    const fetchPaymentsFromStripe = async () => {
+      try {
+        setLoading(true);
 
-    return () => unsubscribe();
+        // Fetch payments and statistics from Stripe
+        const [paymentsData, stats] = await Promise.all([
+          getStripePayments(100),
+          getPaymentStatistics()
+        ]);
+
+        setPayments(paymentsData);
+        setStatistics(stats);
+      } catch (error) {
+        console.error('Error fetching Stripe payments:', error);
+        toast.error('Failed to load payments from Stripe');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaymentsFromStripe();
   }, []);
 
   // Filter payments
@@ -40,7 +57,7 @@ const Payments = () => {
       filtered = filtered.filter(payment => payment.status === statusFilter);
     }
 
-    filtered = filterBySearch(filtered, searchTerm, ['id', 'orderId', 'stripeTransactionId', 'customerName', 'tailorName']);
+    filtered = filterBySearch(filtered, searchTerm, ['id', 'customerEmail', 'customerName', 'description']);
 
     setFilteredPayments(filtered);
     setCurrentPage(1);
@@ -49,15 +66,6 @@ const Payments = () => {
   const paginatedPayments = paginate(filteredPayments, currentPage, ITEMS_PER_PAGE);
   const totalPages = getTotalPages(filteredPayments.length, ITEMS_PER_PAGE);
 
-  // Calculate statistics
-  const totalRevenue = payments
-    .filter(p => p.status === 'completed')
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  const pendingAmount = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
-
   const handleView = (payment) => {
     setSelectedPayment(payment);
     setShowViewModal(true);
@@ -65,69 +73,73 @@ const Payments = () => {
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
+    { value: 'succeeded', label: 'Succeeded' },
     { value: 'pending', label: 'Pending' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'refunded', label: 'Refunded' },
+    { value: 'failed', label: 'Failed' },
   ];
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'succeeded':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   const columns = [
     {
       header: 'Transaction ID',
       render: (row) => (
         <div className="font-mono text-xs">
-          #{row.stripeTransactionId ? row.stripeTransactionId.substring(0, 12) : row.id.substring(0, 8)}...
-        </div>
-      ),
-    },
-    {
-      header: 'Order ID',
-      render: (row) => (
-        <div className="font-mono text-xs">
-          #{row.orderId ? row.orderId.substring(0, 8) : 'N/A'}
+          {row.id.substring(0, 20)}...
         </div>
       ),
     },
     {
       header: 'Customer',
-      render: (row) => row.customerName || 'N/A',
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.customerName || '-'}</div>
+          <div className="text-xs text-gray-500">{row.customerEmail || '-'}</div>
+        </div>
+      ),
     },
     {
-      header: 'Tailor',
-      render: (row) => row.tailorName || 'N/A',
+      header: 'Description',
+      render: (row) => row.description || '-',
     },
     {
       header: 'Amount',
       render: (row) => (
         <span className="font-semibold text-green-600">
-          {formatCurrency(row.amount || 0)}
+          {row.currency} {row.amount.toLocaleString()}
         </span>
       ),
     },
     {
-      header: 'Platform Fee',
-      render: (row) => formatCurrency(row.platformFee || 0),
-    },
-    {
-      header: 'Tailor Earnings',
+      header: 'Payment Method',
       render: (row) => (
-        <span className="text-blue-600">
-          {formatCurrency(row.tailorEarnings || 0)}
-        </span>
+        <span className="capitalize">{row.paymentMethod}</span>
       ),
     },
     {
       header: 'Status',
       render: (row) => (
         <StatusBadge
-          status={row.status || 'pending'}
-          label={PAYMENT_STATUS_LABELS[row.status || 'pending']}
-          colorClass={PAYMENT_STATUS_COLORS[row.status || 'pending']}
+          status={row.status}
+          label={row.status}
+          colorClass={getStatusColor(row.status)}
         />
       ),
     },
     {
       header: 'Date',
-      render: (row) => formatDate(row.createdAt),
+      render: (row) => formatDate(row.created),
     },
     {
       header: 'Actions',
@@ -170,17 +182,18 @@ const Payments = () => {
     <Layout title="Payments & Transactions">
       <div className="space-y-6">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(totalRevenue)}
+                <p className="text-sm font-medium text-green-100">Total Revenue (All Time)</p>
+                <p className="text-3xl font-bold mt-2">
+                  PKR {statistics?.totalRevenue?.toLocaleString() || '0'}
                 </p>
+                <p className="text-xs text-green-100 mt-1">From Stripe Payments</p>
               </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-white/20 rounded-lg">
+                <DollarSign className="w-8 h-8" />
               </div>
             </div>
           </div>
@@ -188,27 +201,44 @@ const Payments = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pending Amount</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">
-                  {formatCurrency(pendingAmount)}
-                </p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <CreditCard className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Transactions</p>
+                <p className="text-sm font-medium text-gray-600">Net Revenue</p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">
-                  {payments.length}
+                  PKR {statistics?.netRevenue?.toLocaleString() || '0'}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">After refunds</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-lg">
-                <CreditCard className="w-6 h-6 text-blue-600" />
+                <TrendingUp className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Successful Payments</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">
+                  {statistics?.successfulPayments || 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Completed transactions</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <CreditCard className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Failed Payments</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">
+                  {statistics?.failedPayments || 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Unsuccessful attempts</p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-lg">
+                <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
             </div>
           </div>
@@ -254,17 +284,17 @@ const Payments = () => {
         <Modal
           isOpen={showViewModal}
           onClose={() => setShowViewModal(false)}
-          title="Payment Details"
+          title="Payment Details from Stripe"
         >
           {selectedPayment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Transaction ID
+                    Charge ID
                   </label>
-                  <p className="text-gray-900 font-mono text-sm">
-                    {selectedPayment.stripeTransactionId || selectedPayment.id}
+                  <p className="text-gray-900 font-mono text-xs break-all">
+                    {selectedPayment.id}
                   </p>
                 </div>
                 <div>
@@ -272,34 +302,34 @@ const Payments = () => {
                     Status
                   </label>
                   <StatusBadge
-                    status={selectedPayment.status || 'pending'}
-                    label={PAYMENT_STATUS_LABELS[selectedPayment.status || 'pending']}
-                    colorClass={PAYMENT_STATUS_COLORS[selectedPayment.status || 'pending']}
+                    status={selectedPayment.status}
+                    label={selectedPayment.status}
+                    colorClass={getStatusColor(selectedPayment.status)}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Order ID
+                  Description
                 </label>
-                <p className="text-gray-900 font-mono text-sm">
-                  #{selectedPayment.orderId}
+                <p className="text-gray-900">
+                  {selectedPayment.description || '-'}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer
+                    Customer Name
                   </label>
-                  <p className="text-gray-900">{selectedPayment.customerName || 'N/A'}</p>
+                  <p className="text-gray-900">{selectedPayment.customerName || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tailor
+                    Customer Email
                   </label>
-                  <p className="text-gray-900">{selectedPayment.tailorName || 'N/A'}</p>
+                  <p className="text-gray-900">{selectedPayment.customerEmail || '-'}</p>
                 </div>
               </div>
 
@@ -307,64 +337,55 @@ const Payments = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Total Amount
+                      Amount
                     </label>
-                    <p className="text-xl font-bold text-green-600">
-                      {formatCurrency(selectedPayment.amount || 0)}
+                    <p className="text-2xl font-bold text-green-600">
+                      {selectedPayment.currency} {selectedPayment.amount.toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Platform Fee
+                      Payment Method
                     </label>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {formatCurrency(selectedPayment.platformFee || 0)}
+                    <p className="text-gray-900 capitalize">
+                      {selectedPayment.paymentMethod}
                     </p>
                   </div>
                 </div>
-                <div className="mt-4">
+              </div>
+
+              <div className="border-t pt-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tailor Earnings
+                    Created At
                   </label>
-                  <p className="text-xl font-bold text-blue-600">
-                    {formatCurrency(selectedPayment.tailorEarnings || 0)}
+                  <p className="text-gray-900 text-sm">
+                    {formatDateTime(selectedPayment.created)}
                   </p>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Created At
-                    </label>
-                    <p className="text-gray-900 text-sm">
-                      {formatDateTime(selectedPayment.createdAt)}
-                    </p>
-                  </div>
-                  {selectedPayment.completedAt && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Completed At
-                      </label>
-                      <p className="text-gray-900 text-sm">
-                        {formatDateTime(selectedPayment.completedAt)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {selectedPayment.stripeTransactionId && (
+              {selectedPayment.receiptUrl && (
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Stripe Transaction:</strong>
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Receipt:</strong>
                   </p>
-                  <p className="text-xs text-blue-600 font-mono mt-1">
-                    {selectedPayment.stripeTransactionId}
-                  </p>
+                  <a
+                    href={selectedPayment.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 underline text-sm"
+                  >
+                    View Receipt
+                  </a>
                 </div>
               )}
+
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>✓ This payment was processed through Stripe</strong>
+                </p>
+              </div>
             </div>
           )}
         </Modal>

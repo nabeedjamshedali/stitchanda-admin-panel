@@ -12,7 +12,9 @@ import {
   query,
   where,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  orderBy,
+  writeBatch
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
@@ -39,7 +41,14 @@ export const analytics = getAnalytics(app);
 export const getCustomers = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'customer'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        customerId: data.customerId || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting customers:', error);
     throw error;
@@ -51,7 +60,12 @@ export const getCustomer = async (id) => {
     const docRef = doc(db, 'customer', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        customerId: data.customerId || docSnap.id,
+        ...data
+      };
     }
     return null;
   } catch (error) {
@@ -96,11 +110,27 @@ export const getCustomerById = async (id) => {
 export const addCustomer = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'customer'), {
-      ...data,
-      createdAt: serverTimestamp(),
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      gender: data.gender || 'N/A',
+      profileImagePath: data.profileImagePath || '',
+      address: {
+        fullAddress: data.address?.fullAddress || '',
+        latitude: data.address?.latitude || 0,
+        longitude: data.address?.longitude || 0
+      },
       totalOrders: 0,
-      totalSpent: 0
+      totalSpent: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
+
+    // Update document with customerId
+    await updateDoc(docRef, {
+      customerId: docRef.id
+    });
+
     return docRef.id;
   } catch (error) {
     console.error('Error adding customer:', error);
@@ -149,18 +179,32 @@ export const searchCustomers = async (searchTerm) => {
 export const getTailors = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'tailor'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        tailor_id: data.tailor_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting tailors:', error);
     throw error;
   }
 };
 
-export const getTailorsByStatus = async (status) => {
+export const getTailorsByStatus = async (verification_status) => {
   try {
-    const q = query(collection(db, 'tailor'), where('status', '==', status));
+    const q = query(collection(db, 'tailor'), where('verification_status', '==', verification_status));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        tailor_id: data.tailor_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting tailors by status:', error);
     throw error;
@@ -168,11 +212,11 @@ export const getTailorsByStatus = async (status) => {
 };
 
 export const getPendingTailors = async () => {
-  return getTailorsByStatus('pending');
+  return getTailorsByStatus(0); // 0 = pending
 };
 
 export const getApprovedTailors = async () => {
-  return getTailorsByStatus('approved');
+  return getTailorsByStatus(1); // 1 = approved
 };
 
 export const getTailor = async (id) => {
@@ -238,13 +282,38 @@ export const getTailorById = async (id) => {
 export const addTailor = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'tailor'), {
-      ...data,
-      status: 'pending',
-      createdAt: serverTimestamp(),
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      gender: data.gender || 'male',
+      image_path: data.image_path || '',
+      cnic: data.cnic || 0,
+      cnic_front_image_path: data.cnic_front_image_path || '',
+      cnic_back_image_path: data.cnic_back_image_path || '',
+      address: {
+        full_address: data.address?.full_address || '',
+        latitude: data.address?.latitude || 0,
+        longitude: data.address?.longitude || 0
+      },
+      category: data.category || [],
+      experience: data.experience || 0,
+      review: 0,
+      availibility_status: false,
+      is_verified: false,
+      verification_status: 0, // 0 = pending, 1 = approved, 2 = rejected
+      stripe_account_id: data.stripe_account_id || '',
       rating: 0,
       totalOrders: 0,
-      totalEarnings: 0
+      totalEarnings: 0,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
     });
+
+    // Update document with tailor_id
+    await updateDoc(docRef, {
+      tailor_id: docRef.id
+    });
+
     return docRef.id;
   } catch (error) {
     console.error('Error adding tailor:', error);
@@ -269,7 +338,8 @@ export const approveTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      is_verified: true,  // Actual DB field
+      is_verified: true,
+      verification_status: 1, // 1 = approved
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -282,7 +352,8 @@ export const rejectTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      is_verified: false,  // Actual DB field
+      is_verified: false,
+      verification_status: 2, // 2 = rejected
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -333,18 +404,32 @@ export const deleteTailor = async (id) => {
 export const getRiders = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'driver'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        driver_id: data.driver_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting riders:', error);
     throw error;
   }
 };
 
-export const getRidersByStatus = async (status) => {
+export const getRidersByStatus = async (verification_status) => {
   try {
-    const q = query(collection(db, 'driver'), where('status', '==', status));
+    const q = query(collection(db, 'driver'), where('verification_status', '==', verification_status));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        driver_id: data.driver_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting riders by status:', error);
     throw error;
@@ -352,15 +437,15 @@ export const getRidersByStatus = async (status) => {
 };
 
 export const getPendingRiders = async () => {
-  return getRidersByStatus('pending');
+  return getRidersByStatus(0); // 0 = pending
 };
 
 export const getApprovedRiders = async () => {
-  return getRidersByStatus('approved');
+  return getRidersByStatus(1); // 1 = approved
 };
 
 export const getActiveRiders = async () => {
-  return getRidersByStatus('active');
+  return getRidersByStatus(1); // 1 = approved/active
 };
 
 export const getRider = async (id) => {
@@ -422,14 +507,28 @@ export const getRiderById = async (id) => {
 export const addRider = async (data) => {
   try {
     const docRef = await addDoc(collection(db, 'driver'), {
-      ...data,
-      status: 'pending',
-      createdAt: serverTimestamp(),
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      profile_image_path: data.profile_image_path || '',
+      cnic_image_path: data.cnic_image_path || '',
+      current_location: {
+        latitude: data.current_location?.latitude || 0,
+        longitude: data.current_location?.longitude || 0
+      },
+      availiability_status: 0, // 0 = offline, 1 = online (note the typo in DB)
+      is_assigned: 0, // 0 = no, 1 = yes
+      verification_status: 0, // 0 = pending, 1 = approved, 2 = rejected
       rating: 0,
       totalDeliveries: 0,
-      is_assigned: 0,          // PDF Rule: Driver availability (0 = not assigned, 1 = assigned)
-      availability_status: 1   // PDF Rule: Driver availability (0 = unavailable, 1 = available)
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
     });
+
+    await updateDoc(docRef, {
+      driver_id: docRef.id
+    });
+
     return docRef.id;
   } catch (error) {
     console.error('Error adding rider:', error);
@@ -442,7 +541,7 @@ export const updateRider = async (id, data) => {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       ...data,
-      updatedAt: serverTimestamp()
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating rider:', error);
@@ -467,7 +566,7 @@ export const rejectRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 0,  // Actual DB field (0 = not verified)
+      verification_status: 2, // 2 = rejected
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -480,8 +579,7 @@ export const suspendRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 0,  // Suspend means not verified
-      availiability_status: 0,  // Also mark as unavailable (note the typo in DB)
+      availiability_status: 0, // Mark as offline (note the typo in DB)
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -494,8 +592,8 @@ export const activateRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 1,  // Actual DB field (1 = verified)
-      availiability_status: 1,  // Mark as available (note the typo in DB)
+      verification_status: 1, // 1 = approved
+      availiability_status: 1, // Mark as online (note the typo in DB)
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -513,12 +611,39 @@ export const deleteRider = async (id) => {
   }
 };
 
+// ==================== ORDER DETAILS (Metadata for Orders) ====================
+
+export const getOrderDetailsByOrderId = async (orderId) => {
+  try {
+    const q = query(collection(db, 'orderDetails'), where('order_id', '==', orderId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        details_id: data.details_id || doc.id,
+        ...data
+      };
+    });
+  } catch (error) {
+    console.error('Error getting order details by order ID:', error);
+    throw error;
+  }
+};
+
 // ==================== ORDERS CRUD + STATUS MANAGEMENT ====================
 
 export const getOrders = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'order'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        order_id: data.order_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting orders:', error);
     throw error;
@@ -529,7 +654,14 @@ export const getOrdersByStatus = async (status) => {
   try {
     const q = query(collection(db, 'order'), where('status', '==', status));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        order_id: data.order_id || doc.id,
+        ...data
+      };
+    });
   } catch (error) {
     console.error('Error getting orders by status:', error);
     throw error;
@@ -561,11 +693,12 @@ export const getOrderById = async (id) => {
 
     const order = { id: docSnap.id, ...docSnap.data() };
 
-    // Fetch related entities to enrich order data
-    const [customers, tailors, drivers] = await Promise.all([
+    // Fetch related entities and order details to enrich order data
+    const [customers, tailors, drivers, orderDetailsData] = await Promise.all([
       getCustomers(),
       getTailors(),
-      getRiders()
+      getRiders(),
+      getOrderDetailsByOrderId(order.order_id || id)
     ]);
 
     // Create lookup maps
@@ -573,12 +706,13 @@ export const getOrderById = async (id) => {
     const tailorMap = Object.fromEntries(tailors.map(t => [t.tailor_id || t.id, t.name]));
     const driverMap = Object.fromEntries(drivers.map(d => [d.driver_id || d.id, d.name]));
 
-    // Enrich order with names
+    // Enrich order with names and order details
     return {
       ...order,
       customerName: customerMap[order.customer_id] || 'Unknown Customer',
       tailorName: order.tailor_id ? (tailorMap[order.tailor_id] || 'Unknown Tailor') : null,
-      riderName: order.rider_id ? (driverMap[order.rider_id] || 'Unknown Rider') : null
+      riderName: order.rider_id ? (driverMap[order.rider_id] || 'Unknown Rider') : null,
+      orderDetails: orderDetailsData.length > 0 ? orderDetailsData[0] : null
     };
   } catch (error) {
     console.error('Error getting order by ID:', error);
@@ -616,7 +750,7 @@ export const updateOrder = async (id, data) => {
     const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
       ...data,
-      updatedAt: serverTimestamp()
+      updated_at: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating order:', error);
@@ -728,6 +862,7 @@ export const listenToTailors = (callback) => {
 
       return {
         id: doc.id,
+        tailor_id: data.tailor_id || doc.id,
         ...data,
         // Map DB fields to UI-expected fields
         specialization: data.category || [],  // Map category to specialization
@@ -759,6 +894,7 @@ export const listenToRiders = (callback) => {
 
       return {
         id: doc.id,
+        driver_id: data.driver_id || doc.id,
         ...data,
         // Map DB fields to UI-expected fields
         currentlyAvailable: data.availiability_status === 1,  // Note: typo in DB field name
@@ -773,7 +909,14 @@ export const listenToRiders = (callback) => {
 
 export const listenToOrders = (callback) => {
   return onSnapshot(collection(db, 'order'), async (snapshot) => {
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const orders = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        order_id: data.order_id || doc.id,
+        ...data
+      };
+    });
 
     // Fetch all customers, tailors, and drivers to enrich orders with names
     const [customers, tailors, drivers] = await Promise.all([
@@ -801,7 +944,14 @@ export const listenToOrders = (callback) => {
 
 export const listenToCustomers = (callback) => {
   return onSnapshot(collection(db, 'customer'), async (snapshot) => {
-    const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const customers = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        customerId: data.customerId || doc.id,
+        ...data
+      };
+    });
 
     // Calculate totalOrders and totalSpent for each customer from orders
     const orders = await getOrders();
@@ -954,6 +1104,246 @@ export const getStatistics = async () => {
     };
   } catch (error) {
     console.error('Error getting statistics:', error);
+    throw error;
+  }
+};
+
+// ==================== CHAT / MESSAGES (Admin Support) ====================
+
+export const getAdminConversations = async (adminId) => {
+  try {
+    // Query without orderBy to avoid index requirement initially
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', adminId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    // Enrich conversations with participant details
+    const conversations = await Promise.all(
+      querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        const otherParticipantId = data.participants?.find(p => p !== adminId);
+
+        // Determine participant type and fetch details
+        let participantDetails = null;
+        let participantType = null;
+
+        if (otherParticipantId) {
+          // Check in customers first
+          const customerDoc = await getDoc(doc(db, 'customer', otherParticipantId));
+          if (customerDoc.exists()) {
+            participantDetails = { id: customerDoc.id, ...customerDoc.data() };
+            participantType = 'customer';
+          } else {
+            // Check in tailors
+            const tailorDoc = await getDoc(doc(db, 'tailor', otherParticipantId));
+            if (tailorDoc.exists()) {
+              participantDetails = { id: tailorDoc.id, ...tailorDoc.data() };
+              participantType = 'tailor';
+            } else {
+              // Check in drivers
+              const driverDoc = await getDoc(doc(db, 'driver', otherParticipantId));
+              if (driverDoc.exists()) {
+                participantDetails = { id: driverDoc.id, ...driverDoc.data() };
+                participantType = 'rider';
+              }
+            }
+          }
+        }
+
+        return {
+          id: docSnap.id,
+          ...data,
+          participantType,
+          participantName: participantDetails?.name || 'Unknown',
+          participantEmail: participantDetails?.email || '-',
+        };
+      })
+    );
+
+    // Sort by last_updated in JavaScript (descending - newest first)
+    return conversations.sort((a, b) => {
+      const aTime = a.last_updated?.toMillis?.() || 0;
+      const bTime = b.last_updated?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
+  } catch (error) {
+    console.error('Error getting admin conversations:', error);
+    throw error;
+  }
+};
+
+export const getConversationMessages = async (conversationId) => {
+  try {
+    const q = query(
+      collection(db, 'conversations', conversationId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
+  } catch (error) {
+    console.error('Error getting conversation messages:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (conversationId, messageData) => {
+  try {
+    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    await addDoc(messagesRef, {
+      sender_id: messageData.sender_id,
+      sender_type: messageData.sender_type || 'admin',
+      message: messageData.message,
+      timestamp: serverTimestamp(),
+      read: false
+    });
+
+    // Update conversation last_message and last_updated
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await updateDoc(conversationRef, {
+      last_message: messageData.message,
+      last_updated: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
+export const markMessagesAsRead = async (conversationId, userId) => {
+  try {
+    const q = query(
+      collection(db, 'conversations', conversationId, 'messages'),
+      where('sender_id', '!=', userId),
+      where('read', '==', false)
+    );
+    const querySnapshot = await getDocs(q);
+
+    const batch = writeBatch(db);
+    querySnapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, { read: true });
+    });
+
+    await batch.commit();
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    throw error;
+  }
+};
+
+export const listenToConversationMessages = (conversationId, callback) => {
+  const q = query(
+    collection(db, 'conversations', conversationId, 'messages'),
+    orderBy('timestamp', 'asc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
+    callback(messages);
+  });
+};
+
+export const createConversation = async (adminId, participantId, participantType) => {
+  try {
+    const conversationRef = await addDoc(collection(db, 'conversations'), {
+      participants: [adminId, participantId],
+      participant_types: {
+        [adminId]: 'admin',
+        [participantId]: participantType
+      },
+      type: `admin_${participantType}`,
+      last_message: '',
+      last_updated: serverTimestamp(),
+      created_at: serverTimestamp()
+    });
+
+    return conversationRef.id;
+  } catch (error) {
+    console.error('Error creating conversation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Find existing conversation or create new one
+ * Returns conversation ID
+ */
+export const findOrCreateConversation = async (adminId, participantId, participantType) => {
+  try {
+    // Check if conversation already exists
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', adminId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    // Find conversation with this specific participant
+    let existingConversation = null;
+    querySnapshot.docs.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.participants && data.participants.includes(participantId)) {
+        existingConversation = { id: docSnap.id, ...data };
+      }
+    });
+
+    // If conversation exists, return its ID
+    if (existingConversation) {
+      return existingConversation.id;
+    }
+
+    // Otherwise, create new conversation
+    return await createConversation(adminId, participantId, participantType);
+  } catch (error) {
+    console.error('Error finding or creating conversation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all users (customers, tailors, riders) for starting conversations
+ */
+export const getAllUsersForMessaging = async () => {
+  try {
+    const [customers, tailors, riders] = await Promise.all([
+      getCustomers(),
+      getTailors(),
+      getRiders()
+    ]);
+
+    return {
+      customers: customers.map(c => ({
+        id: c.customerId || c.id,
+        name: c.name,
+        email: c.email,
+        type: 'customer',
+        profileImage: c.profileImagePath
+      })),
+      tailors: tailors.map(t => ({
+        id: t.tailor_id || t.id,
+        name: t.name,
+        email: t.email,
+        type: 'tailor',
+        profileImage: t.image_path,
+        status: t.status
+      })),
+      riders: riders.map(r => ({
+        id: r.driver_id || r.id,
+        name: r.name,
+        email: r.email,
+        type: 'rider',
+        profileImage: r.profile_image_path,
+        status: r.status
+      }))
+    };
+  } catch (error) {
+    console.error('Error getting users for messaging:', error);
     throw error;
   }
 };

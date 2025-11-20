@@ -217,7 +217,7 @@ const Orders = () => {
     },
     {
       header: 'Customer',
-      render: (row) => row.customerName || 'N/A',
+      render: (row) => row.customerName || '-',
     },
     {
       header: 'Tailor',
@@ -243,7 +243,7 @@ const Orders = () => {
     },
     {
       header: 'Date',
-      render: (row) => formatDate(row.created_at),
+      render: (row) => row.created_at ? formatDate(row.created_at) : '-',
     },
     {
       header: 'Actions',

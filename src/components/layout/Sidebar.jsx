@@ -6,6 +6,7 @@ import {
   Bike,
   ShoppingBag,
   CreditCard,
+  MessageCircle,
   LogOut,
   User,
 } from 'lucide-react';
@@ -48,6 +49,11 @@ const Sidebar = () => {
       name: 'Orders',
       path: '/orders',
       icon: ShoppingBag,
+    },
+    {
+      name: 'Messages',
+      path: '/messages',
+      icon: MessageCircle,
     },
     {
       name: 'Payments',

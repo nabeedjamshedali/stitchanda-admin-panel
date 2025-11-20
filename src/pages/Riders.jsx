@@ -173,15 +173,15 @@ const Riders = () => {
   const columns = [
     {
       header: 'Name',
-      accessor: 'name',
+      render: (row) => row.name || '-',
     },
     {
       header: 'Email',
-      accessor: 'email',
+      render: (row) => row.email || '-',
     },
     {
       header: 'Phone',
-      accessor: 'phone',
+      render: (row) => row.phone || '-',
     },
     {
       header: 'CNIC',
