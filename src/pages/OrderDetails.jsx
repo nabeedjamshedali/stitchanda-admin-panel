@@ -23,10 +23,7 @@ import {
 import {
   getOrderById,
   updateOrderStatus,
-  assignTailor,
   assignRider,
-  cancelOrder,
-  getApprovedTailors,
   getActiveRiders,
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
@@ -43,18 +40,13 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [showAssignTailorModal, setShowAssignTailorModal] = useState(false);
   const [showAssignRiderModal, setShowAssignRiderModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  const [tailors, setTailors] = useState([]);
   const [riders, setRiders] = useState([]);
   const [assignData, setAssignData] = useState({
-    tailorId: '',
     riderId: '',
     newStatus: '',
-    cancelReason: '',
   });
 
   const { execute, loading: actionLoading } = useAsyncOperation();
@@ -71,12 +63,7 @@ const OrderDetails = () => {
         }
         setOrder(orderData);
 
-        // Fetch tailors and riders for assignment
-        const [tailorsData, ridersData] = await Promise.all([
-          getApprovedTailors(),
-          getActiveRiders(),
-        ]);
-        setTailors(tailorsData);
+        const ridersData = await getActiveRiders();
         setRiders(ridersData);
       } catch (err) {
         console.error('Error fetching order:', err);
@@ -89,17 +76,6 @@ const OrderDetails = () => {
     fetchOrderData();
   }, [id]);
 
-  const handleAssignTailor = async (e) => {
-    e.preventDefault();
-    await execute(
-      () => assignTailor(order.id, assignData.tailorId),
-      'Tailor assigned successfully'
-    );
-    setShowAssignTailorModal(false);
-    // Refresh order data
-    const updated = await getOrderById(id);
-    setOrder(updated);
-  };
 
   const handleAssignRider = async (e) => {
     e.preventDefault();
@@ -123,15 +99,6 @@ const OrderDetails = () => {
     setOrder(updated);
   };
 
-  const handleCancelOrder = async () => {
-    await execute(
-      () => cancelOrder(order.id, assignData.cancelReason),
-      'Order cancelled successfully'
-    );
-    setShowCancelDialog(false);
-    const updated = await getOrderById(id);
-    setOrder(updated);
-  };
 
   if (loading) {
     return (
@@ -156,19 +123,16 @@ const OrderDetails = () => {
   }
 
   const statusOptions = Object.keys(ORDER_STATUS_LABELS)
-    .filter(key => parseInt(key) > order.status) // Only show higher statuses
+    .filter(key => parseInt(key) > order.status) 
     .map(key => ({
       value: key,
       label: ORDER_STATUS_LABELS[key]
     }));
 
-  const tailorOptions = tailors.map(t => ({ value: t.id, label: t.name }));
   const riderOptions = riders.map(r => ({ value: r.id, label: r.name }));
 
-  const canAssignTailor = !order.tailor_id && order.status === 0;
-  const canAssignRider = order.tailor_id && !order.rider_id;
-  const canUpdateStatus = order.status !== -2 && order.status !== 10;
-  const canCancel = order.status !== -2 && order.status !== 10;
+  const canAssignRider = order.status === 0 && !order.rider_id;
+  const canUpdateStatus = order.status !== -3 && order.status !== 10 && order.status >= 0;
 
   return (
     <Layout title="Order Details">
@@ -195,14 +159,6 @@ const OrderDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            {canAssignTailor && (
-              <Button
-                variant="primary"
-                onClick={() => setShowAssignTailorModal(true)}
-              >
-                Assign Tailor
-              </Button>
-            )}
             {canAssignRider && (
               <Button
                 variant="primary"
@@ -220,31 +176,71 @@ const OrderDetails = () => {
                 Update Status
               </Button>
             )}
-            {canCancel && (
-              <Button
-                variant="ghost"
-                icon={XCircle}
-                onClick={() => setShowCancelDialog(true)}
-                className="text-red-600 hover:text-red-700"
-              >
-                Cancel Order
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Status Banner (if cancelled) */}
         {order.status === -2 && (
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-blue-400" />
+              <div>
+                <p className="text-sm text-blue-700 font-semibold">
+                  Order created - Waiting for tailor to accept or reject
+                </p>
+                <p className="text-sm text-blue-600 mt-1">
+                  The tailor will review and respond to this order soon.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Banner for -1: Waiting for customer choice */}
+        {order.status === -1 && (
+          <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <div>
+                <p className="text-sm text-green-700 font-semibold">
+                  Tailor accepted - Waiting for customer delivery choice
+                </p>
+                <p className="text-sm text-green-600 mt-1">
+                  Customer will choose between self-delivery or booking a rider.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Banner for 0: Waiting for rider assignment */}
+        {order.status === 0 && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+              <div>
+                <p className="text-sm text-yellow-700 font-semibold">
+                  Customer chose to book a rider - Assign a rider to proceed
+                </p>
+                <p className="text-sm text-yellow-600 mt-1">
+                  Please assign an available rider to pick up this order from the customer.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Banner for -3: Rejected by tailor */}
+        {order.status === -3 && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
             <div className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-red-400" />
               <div>
                 <p className="text-sm text-red-700 font-semibold">
-                  This order has been cancelled
+                  This order has been rejected by tailor
                 </p>
-                {order.cancellation_reason && (
+                {order.rejection_reason && (
                   <p className="text-sm text-red-600 mt-1">
-                    Reason: {order.cancellation_reason}
+                    Reason: {order.rejection_reason}
                   </p>
                 )}
               </div>
@@ -402,38 +398,6 @@ const OrderDetails = () => {
           </CardContent>
         </Card>
 
-        {/* Assign Tailor Modal */}
-        <Modal
-          isOpen={showAssignTailorModal}
-          onClose={() => setShowAssignTailorModal(false)}
-          title="Assign Tailor"
-        >
-          <form onSubmit={handleAssignTailor} className="space-y-4">
-            <Select
-              label="Select Tailor"
-              value={assignData.tailorId}
-              onChange={(e) => setAssignData({ ...assignData, tailorId: e.target.value })}
-              options={[
-                { value: '', label: 'Choose a tailor...' },
-                ...tailorOptions
-              ]}
-              required
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowAssignTailorModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" loading={actionLoading}>
-                Assign Tailor
-              </Button>
-            </div>
-          </form>
-        </Modal>
-
         {/* Assign Rider Modal */}
         <Modal
           isOpen={showAssignRiderModal}
@@ -503,33 +467,6 @@ const OrderDetails = () => {
           </form>
         </Modal>
 
-        {/* Cancel Order Dialog */}
-        <Modal
-          isOpen={showCancelDialog}
-          onClose={() => setShowCancelDialog(false)}
-          title="Cancel Order"
-          size="sm"
-        >
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Are you sure you want to cancel this order? This action cannot be undone.
-            </p>
-            <Input
-              label="Reason for cancellation (optional)"
-              value={assignData.cancelReason}
-              onChange={(e) => setAssignData({ ...assignData, cancelReason: e.target.value })}
-              placeholder="Enter reason..."
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button variant="secondary" onClick={() => setShowCancelDialog(false)}>
-                No, Keep Order
-              </Button>
-              <Button variant="danger" onClick={handleCancelOrder} loading={actionLoading}>
-                Yes, Cancel Order
-              </Button>
-            </div>
-          </div>
-        </Modal>
       </div>
     </Layout>
   );

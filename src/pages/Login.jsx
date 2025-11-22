@@ -34,10 +34,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Brown/Tan */}
       <div className="hidden lg:flex lg:w-[35%] bg-[#A67B5B] text-white p-8 flex-col justify-between">
         <div>
-          {/* Icon and Title */}
           <div className="mb-8">
             <CheckCircle className="w-10 h-10 mb-4" />
             <h1 className="text-2xl font-bold mb-3">Stitchanda Admin System</h1>
@@ -47,9 +45,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Steps */}
           <div className="space-y-6">
-            {/* Step 1 */}
             <div>
               <div className="mb-2">
                 <Users className="w-6 h-6" />
@@ -61,7 +57,6 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Step 2 */}
             <div>
               <div className="mb-2">
                 <Package className="w-6 h-6" />
@@ -73,7 +68,6 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Step 3 */}
             <div>
               <div className="mb-2">
                 <Scissors className="w-6 h-6" />
@@ -88,21 +82,17 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
       <div className="flex-1 flex items-center justify-center px-6 py-6 bg-white">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-6">
             <Scissors className="w-14 h-14 mx-auto text-[#A67B5B] mb-2" />
             <h1 className="text-2xl font-bold text-gray-900">Stitchanda</h1>
           </div>
 
-          {/* Desktop Logo */}
           <div className="hidden lg:flex items-center justify-center mb-12">
             <Scissors className="w-16 h-16 text-[#A67B5B]" />
           </div>
 
-          {/* Welcome Text */}
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">
               Welcome Back to<br />Stitchanda Admin App
@@ -110,9 +100,7 @@ const Login = () => {
             <p className="text-gray-600">Log in to access your account.</p>
           </div>
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email Field */}
             <div>
               <input
                 type="email"
@@ -125,7 +113,6 @@ const Login = () => {
               />
             </div>
 
-            {/* Password Field */}
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -150,7 +137,6 @@ const Login = () => {
               </button>
             </div>
 
-            {/* Login Button */}
             <button
               type="submit"
               disabled={loading}

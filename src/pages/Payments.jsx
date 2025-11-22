@@ -24,13 +24,11 @@ const Payments = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  // Fetch payments from Stripe
   useEffect(() => {
     const fetchPaymentsFromStripe = async () => {
       try {
         setLoading(true);
 
-        // Fetch payments and statistics from Stripe
         const [paymentsData, stats] = await Promise.all([
           getStripePayments(100),
           getPaymentStatistics()
@@ -49,7 +47,6 @@ const Payments = () => {
     fetchPaymentsFromStripe();
   }, []);
 
-  // Filter payments
   useEffect(() => {
     let filtered = payments;
 
@@ -71,10 +68,52 @@ const Payments = () => {
     setShowViewModal(true);
   };
 
+  const handleDownloadInvoice = (payment) => {
+    if (payment.receiptUrl) {
+      window.open(payment.receiptUrl, '_blank');
+      toast.success('Opening receipt in new tab');
+      return;
+    }
+
+    const invoiceContent = `
+PAYMENT RECEIPT
+=====================================
+
+Transaction ID: ${payment.id}
+Date: ${formatDateTime(payment.created)}
+Status: ${payment.status.toUpperCase()}
+
+CUSTOMER INFORMATION
+-------------------------------------
+Name: ${payment.customerName || 'N/A'}
+Email: ${payment.customerEmail || 'N/A'}
+
+PAYMENT DETAILS
+-------------------------------------
+Description: ${payment.description || 'N/A'}
+Amount: ${payment.currency} ${payment.amount.toLocaleString()}
+Payment Method: ${payment.paymentMethod}
+
+=====================================
+Generated from Stitchanda Admin Panel
+    `.trim();
+
+    const blob = new Blob([invoiceContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `invoice-${payment.id.substring(0, 15)}-${Date.now()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success('Invoice downloaded successfully');
+  };
+
   const statusOptions = [
     { value: 'all', label: 'All Status' },
     { value: 'succeeded', label: 'Succeeded' },
-    { value: 'pending', label: 'Pending' },
     { value: 'failed', label: 'Failed' },
   ];
 
@@ -82,8 +121,6 @@ const Payments = () => {
     switch (status) {
       case 'succeeded':
         return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
       case 'failed':
         return 'bg-red-100 text-red-800';
       default:
@@ -158,7 +195,7 @@ const Payments = () => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              // Handle download invoice
+              handleDownloadInvoice(row);
             }}
             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
             title="Download Invoice"
@@ -182,7 +219,7 @@ const Payments = () => {
     <Layout title="Payments & Transactions">
       <div className="space-y-6">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
@@ -194,21 +231,6 @@ const Payments = () => {
               </div>
               <div className="p-3 bg-white/20 rounded-lg">
                 <DollarSign className="w-8 h-8" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Net Revenue</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">
-                  PKR {statistics?.netRevenue?.toLocaleString() || '0'}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">After refunds</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>

@@ -43,7 +43,6 @@
   }
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -62,7 +61,6 @@
   background: #a0724f;
 }
 
-/* Loading animation */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -73,7 +71,6 @@
   animation: spin 1s linear infinite;
 }
 
-/* Toast animation */
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);

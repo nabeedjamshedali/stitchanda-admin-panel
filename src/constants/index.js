@@ -1,7 +1,7 @@
 export const ORDER_STATUSES = {
-  REJECTED: -3,               // Rejected
-  CANCELLED: -2,              // Cancelled
-  JUST_CREATED: -1,           // Just created order
+  REJECTED_BY_TAILOR: -3,     // Rejected by tailor
+  JUST_CREATED: -2,           // Just created order
+  ACCEPTED_BY_TAILOR: -1,     // Accepted by tailor
   UNASSIGNED: 0,              // Unassigned (customer side)
   ASSIGNED_RIDER: 1,          // Assigned (rider)
   PICKED_UP_CUSTOMER: 2,      // Picked up (customer side)
@@ -17,63 +17,57 @@ export const ORDER_STATUSES = {
 };
 
 export const ORDER_STATUS_LABELS = {
-  [ORDER_STATUSES.REJECTED]: 'Rejected',
-  [ORDER_STATUSES.CANCELLED]: 'Cancelled',
-  [ORDER_STATUSES.JUST_CREATED]: 'Just Created',
-  [ORDER_STATUSES.UNASSIGNED]: 'Unassigned',
-  [ORDER_STATUSES.ASSIGNED_RIDER]: 'Assigned to Rider',
-  [ORDER_STATUSES.PICKED_UP_CUSTOMER]: 'Picked Up',
-  [ORDER_STATUSES.COMPLETED_RIDER]: 'Delivered to Tailor',
-  [ORDER_STATUSES.RECEIVED_TAILOR]: 'Received by Tailor',
-  [ORDER_STATUSES.COMPLETED_TAILOR]: 'Completed by Tailor',
-  [ORDER_STATUSES.CALL_RIDER_TAILOR]: 'Calling Rider',
-  [ORDER_STATUSES.ASSIGNED_RIDER_TAILOR]: 'Return Rider Assigned',
-  [ORDER_STATUSES.PICKED_UP_TAILOR]: 'Picked Up from Tailor',
-  [ORDER_STATUSES.COMPLETED_TO_CUSTOMER]: 'Delivered to Customer',
-  [ORDER_STATUSES.CUSTOMER_CONFIRMATION]: 'Customer Confirmed',
-  [ORDER_STATUSES.SELF_DELIVERY]: 'Self Delivery'
+  [-3]: 'Rejected by Tailor',
+  [-2]: 'Just Created',
+  [-1]: 'Accepted by Tailor',
+  [0]: 'Unassigned',
+  [1]: 'Assigned to Rider',
+  [2]: 'Picked Up from Customer',
+  [3]: 'Assigned to Tailor',
+  [4]: 'Received by Tailor',
+  [5]: 'Completed by Tailor',
+  [6]: 'Calling Rider',
+  [7]: 'Assigned to Rider (by Tailor)',
+  [8]: 'Picked Up from Tailor',
+  [9]: 'Completed to Customer',
+  [10]: 'Completed',
+  [11]: 'Self Delivery'
 };
 
 export const ORDER_STATUS_COLORS = {
-  [ORDER_STATUSES.REJECTED]: 'bg-red-100 text-red-800',
-  [ORDER_STATUSES.CANCELLED]: 'bg-red-100 text-red-800',
-  [ORDER_STATUSES.JUST_CREATED]: 'bg-gray-100 text-gray-800',
-  [ORDER_STATUSES.UNASSIGNED]: 'bg-yellow-100 text-yellow-800',
-  [ORDER_STATUSES.ASSIGNED_RIDER]: 'bg-blue-100 text-blue-800',
-  [ORDER_STATUSES.PICKED_UP_CUSTOMER]: 'bg-indigo-100 text-indigo-800',
-  [ORDER_STATUSES.COMPLETED_RIDER]: 'bg-purple-100 text-purple-800',
-  [ORDER_STATUSES.RECEIVED_TAILOR]: 'bg-orange-100 text-orange-800',
-  [ORDER_STATUSES.COMPLETED_TAILOR]: 'bg-teal-100 text-teal-800',
-  [ORDER_STATUSES.CALL_RIDER_TAILOR]: 'bg-yellow-100 text-yellow-800',
-  [ORDER_STATUSES.ASSIGNED_RIDER_TAILOR]: 'bg-blue-100 text-blue-800',
-  [ORDER_STATUSES.PICKED_UP_TAILOR]: 'bg-cyan-100 text-cyan-800',
-  [ORDER_STATUSES.COMPLETED_TO_CUSTOMER]: 'bg-green-100 text-green-800',
-  [ORDER_STATUSES.CUSTOMER_CONFIRMATION]: 'bg-emerald-100 text-emerald-800',
-  [ORDER_STATUSES.SELF_DELIVERY]: 'bg-lime-100 text-lime-800'
+  [-3]: 'bg-red-100 text-red-800',
+  [-2]: 'bg-gray-100 text-gray-800',
+  [-1]: 'bg-green-100 text-green-800',
+  [0]: 'bg-yellow-100 text-yellow-800',
+  [1]: 'bg-blue-100 text-blue-800',
+  [2]: 'bg-indigo-100 text-indigo-800',
+  [3]: 'bg-purple-100 text-purple-800',
+  [4]: 'bg-orange-100 text-orange-800',
+  [5]: 'bg-teal-100 text-teal-800',
+  [6]: 'bg-yellow-100 text-yellow-800',
+  [7]: 'bg-blue-100 text-blue-800',
+  [8]: 'bg-cyan-100 text-cyan-800',
+  [9]: 'bg-green-100 text-green-800',
+  [10]: 'bg-emerald-100 text-emerald-800',
+  [11]: 'bg-lime-100 text-lime-800'
 };
 
 export const USER_STATUSES = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  ACTIVE: 'active',
-  SUSPENDED: 'suspended',
-  REJECTED: 'rejected'
+  PENDING: 0,      // Waiting for admin approval
+  APPROVED: 1,     // Admin approved
+  REJECTED: 2      // Admin rejected
 };
 
 export const USER_STATUS_LABELS = {
-  [USER_STATUSES.PENDING]: 'Pending',
-  [USER_STATUSES.APPROVED]: 'Approved',
-  [USER_STATUSES.ACTIVE]: 'Active',
-  [USER_STATUSES.SUSPENDED]: 'Suspended',
-  [USER_STATUSES.REJECTED]: 'Rejected'
+  [0]: 'Pending',
+  [1]: 'Approved',
+  [2]: 'Rejected'
 };
 
 export const USER_STATUS_COLORS = {
-  [USER_STATUSES.PENDING]: 'bg-yellow-100 text-yellow-800',
-  [USER_STATUSES.APPROVED]: 'bg-blue-100 text-blue-800',
-  [USER_STATUSES.ACTIVE]: 'bg-green-100 text-green-800',
-  [USER_STATUSES.SUSPENDED]: 'bg-orange-100 text-orange-800',
-  [USER_STATUSES.REJECTED]: 'bg-red-100 text-red-800'
+  [0]: 'bg-yellow-100 text-yellow-800',
+  [1]: 'bg-green-100 text-green-800',
+  [2]: 'bg-red-100 text-red-800'
 };
 
 export const PAYMENT_STATUSES = {

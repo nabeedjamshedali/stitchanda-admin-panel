@@ -241,21 +241,29 @@ export const getTailorById = async (id) => {
 
     const tailor = { id: docSnap.id, ...docSnap.data() };
 
-    const orders = await getOrders();
+    const [orders, customers] = await Promise.all([
+      getOrders(),
+      getCustomers()
+    ]);
+
     const tailorId = tailor.tailor_id || tailor.id;
-    const tailorOrders = orders.filter(order => order.tailor_id === tailorId);
+    const tailorOrders = orders
+      .filter(order => order.tailor_id === tailorId)
+      .map(order => {
+        const customer = customers.find(c => c.customerId === order.customer_id || c.id === order.customer_id);
+        return {
+          ...order,
+          customerName: customer?.name || customer?.username || 'N/A'
+        };
+      });
 
     const totalOrders = tailorOrders.length;
     const totalEarnings = tailorOrders
       .filter(order => order.payment_status?.toLowerCase() === 'paid')
       .reduce((sum, order) => sum + (order.total_price || 0), 0);
 
-    let status = 'pending';
-    if (tailor.is_verified === true) {
-      status = tailor.availibility_status === true ? 'active' : 'suspended';
-    } else if (tailor.is_verified === false) {
-      status = tailor.updated_at ? 'rejected' : 'pending';
-    }
+    // Use verification_status directly: 0=pending, 1=approved, 2=rejected
+    const status = tailor.verification_status ?? 0;
 
     return {
       ...tailor,
@@ -356,30 +364,16 @@ export const rejectTailor = async (id) => {
   }
 };
 
-export const suspendTailor = async (id) => {
+export const pendingTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      is_verified: false,  
-      availibility_status: false,  
+      is_verified: false,
+      verification_status: 0, // 0 = pending
       updated_at: serverTimestamp()
     });
   } catch (error) {
-    console.error('Error suspending tailor:', error);
-    throw error;
-  }
-};
-
-export const activateTailor = async (id) => {
-  try {
-    const docRef = doc(db, 'tailor', id);
-    await updateDoc(docRef, {
-      is_verified: true,  
-      availibility_status: true,  
-      updated_at: serverTimestamp()
-    });
-  } catch (error) {
-    console.error('Error activating tailor:', error);
+    console.error('Error setting tailor to pending:', error);
     throw error;
   }
 };
@@ -467,19 +461,27 @@ export const getRiderById = async (id) => {
 
     const rider = { id: docSnap.id, ...docSnap.data() };
 
-    const orders = await getOrders();
+    const [orders, customers] = await Promise.all([
+      getOrders(),
+      getCustomers()
+    ]);
+
     const riderId = rider.driver_id || rider.id;
-    const riderOrders = orders.filter(order => order.rider_id === riderId);
+    const riderOrders = orders
+      .filter(order => order.rider_id === riderId)
+      .map(order => {
+        const customer = customers.find(c => c.customerId === order.customer_id || c.id === order.customer_id);
+        return {
+          ...order,
+          customerName: customer?.name || customer?.username || 'N/A'
+        };
+      });
 
-    const totalDeliveries = riderOrders.length;
-    const completedDeliveries = riderOrders.filter(order => order.status === 10).length;
+    const completedDeliveries = riderOrders.filter(order => order.status === 10 || order.status === 11).length;
+    const totalDeliveries = completedDeliveries;
 
-    let status = 'pending';
-    if (rider.verification_status === 1) {
-      status = rider.availiability_status === 1 ? 'active' : 'suspended';
-    } else if (rider.verification_status === 0) {
-      status = rider.updated_at ? 'rejected' : 'pending';
-    }
+    // Use verification_status directly: 0=pending, 1=approved, 2=rejected
+    const status = rider.verification_status ?? 0;
 
     return {
       ...rider,
@@ -558,7 +560,7 @@ export const rejectRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 2, 
+      verification_status: 2,
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -567,29 +569,15 @@ export const rejectRider = async (id) => {
   }
 };
 
-export const suspendRider = async (id) => {
+export const pendingRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      availiability_status: 0, 
+      verification_status: 0,
       updated_at: serverTimestamp()
     });
   } catch (error) {
-    console.error('Error suspending rider:', error);
-    throw error;
-  }
-};
-
-export const activateRider = async (id) => {
-  try {
-    const docRef = doc(db, 'driver', id);
-    await updateDoc(docRef, {
-      verification_status: 1, // 1 = approved
-      availiability_status: 1, // Mark as online 
-      updated_at: serverTimestamp()
-    });
-  } catch (error) {
-    console.error('Error activating rider:', error);
+    console.error('Error setting rider to pending:', error);
     throw error;
   }
 };
@@ -785,13 +773,19 @@ export const assignRider = async (orderId, riderId) => {
   }
 };
 
-export const cancelOrder = async (id) => {
+export const cancelOrder = async (id, cancelReason) => {
   try {
     const docRef = doc(db, 'order', id);
-    await updateDoc(docRef, {
-      status: -2,  
+    const updateData = {
+      status: -3,  // Rejected/Cancelled status
       updated_at: serverTimestamp()
-    });
+    };
+
+    if (cancelReason) {
+      updateData.cancel_reason = cancelReason;
+    }
+
+    await updateDoc(docRef, updateData);
   } catch (error) {
     console.error('Error cancelling order:', error);
     throw error;
@@ -814,21 +808,17 @@ export const listenToTailors = (callback) => {
     const tailors = snapshot.docs.map(doc => {
       const data = doc.data();
 
-      let status = 'pending';
-      if (data.is_verified === true) {
-        status = data.availibility_status === true ? 'active' : 'suspended';
-      } else if (data.is_verified === false) {
-        status = data.updated_at ? 'rejected' : 'pending';
-      }
+      // Use verification_status directly: 0=pending, 1=approved, 2=rejected
+      const status = data.verification_status ?? 0;
 
       return {
         id: doc.id,
         tailor_id: data.tailor_id || doc.id,
         ...data,
-        specialization: data.category || [],  
-        skills: data.category || [], 
-        status: status, 
-        rating: data.review || 0,  
+        specialization: data.category || [],
+        skills: data.category || [],
+        status: status,
+        rating: data.review || 0,
         totalOrders: data.totalOrders || 0,
         totalEarnings: data.totalEarnings || 0,
         address: typeof data.address === 'object' ? data.address.full_address : data.address
@@ -839,25 +829,29 @@ export const listenToTailors = (callback) => {
 };
 
 export const listenToRiders = (callback) => {
-  return onSnapshot(collection(db, 'driver'), (snapshot) => {
+  return onSnapshot(collection(db, 'driver'), async (snapshot) => {
+    // Fetch all orders to calculate deliveries
+    const orders = await getOrders();
+
     const riders = snapshot.docs.map(doc => {
       const data = doc.data();
 
-      let status = 'pending';
-      if (data.verification_status === 1) {
-        status = data.availiability_status === 1 ? 'active' : 'suspended';
-      } else if (data.verification_status === 0) {
-        status = data.updated_at ? 'rejected' : 'pending';
-      }
+      // Use verification_status directly: 0=pending, 1=approved, 2=rejected
+      const status = data.verification_status ?? 0;
+
+      // Calculate deliveries for this rider
+      const riderId = data.driver_id || doc.id;
+      const riderOrders = orders.filter(order => order.rider_id === riderId);
+      const completedDeliveries = riderOrders.filter(order => order.status === 10 || order.status === 11).length;
 
       return {
         id: doc.id,
         driver_id: data.driver_id || doc.id,
         ...data,
-        currentlyAvailable: data.availiability_status === 1,  
-        status: status,  
-        rating: data.review || 0, 
-        totalDeliveries: data.totalDeliveries || 0
+        currentlyAvailable: data.availiability_status === 1,
+        status: status,
+        rating: data.review || 0,
+        totalDeliveries: completedDeliveries
       };
     });
     callback(riders);
@@ -1038,11 +1032,11 @@ export const getStatistics = async () => {
       .reduce((sum, o) => sum + ((o.total_price || 0) * ADMIN_COMMISSION_RATE), 0);
 
     // Order status counts using numeric values
-    // Status values: -3=rejected, -2=cancelled, -1=just_created, 0=unassigned, 1-9=in_progress, 10=completed
-    const pendingOrders = orders.filter(o => o.status === 0 || o.status === -1).length;
+    // Status values: -3=rejected_by_tailor, -2=just_created, -1=accepted_by_tailor, 0=unassigned, 1-9=in_progress, 10=completed, 11=self_delivery
+    const pendingOrders = orders.filter(o => o.status === -2 || o.status === -1 || o.status === 0).length;
     const inProgressOrders = orders.filter(o => o.status >= 1 && o.status <= 9).length;
     const completedOrders = orders.filter(o => o.status === 10 || o.status === 11).length;
-    const cancelledOrders = orders.filter(o => o.status === -2 || o.status === -3).length;
+    const cancelledOrders = orders.filter(o => o.status === -3).length;
 
     return {
       totalCustomers: customers.length,

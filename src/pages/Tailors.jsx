@@ -7,20 +7,13 @@ import SearchBar from '../components/shared/SearchBar';
 import Select from '../components/shared/Select';
 import Pagination from '../components/shared/Pagination';
 import Loading from '../components/shared/Loading';
-import Modal from '../components/shared/Modal';
-import Input from '../components/shared/Input';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import StatusBadge from '../components/shared/StatusBadge';
-import { Plus, Edit, Trash2, Eye, CheckCircle, XCircle, Ban, PlayCircle } from 'lucide-react';
+import { Trash2, Eye, CheckCircle, XCircle } from 'lucide-react';
 import {
-  getTailors,
-  addTailor,
-  updateTailor,
   deleteTailor,
   approveTailor,
   rejectTailor,
-  suspendTailor,
-  activateTailor,
   listenToTailors,
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
@@ -38,24 +31,11 @@ const Tailors = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
   const [selectedTailor, setSelectedTailor] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    skills: '',
-    specialization: '',
-  });
 
   const { execute, loading: actionLoading } = useAsyncOperation();
 
-  // Real-time listener for tailors
   useEffect(() => {
     const unsubscribe = listenToTailors((data) => {
       setTailors(data);
@@ -65,60 +45,28 @@ const Tailors = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter tailors when search term or status filter changes
   useEffect(() => {
     let filtered = tailors;
 
-    // Filter by status
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(tailor => tailor.status === statusFilter);
+      filtered = filtered.filter(tailor => tailor.status === Number(statusFilter));
     }
 
-    // Filter by search term
     filtered = filterBySearch(filtered, searchTerm, ['name', 'email', 'phone']);
 
     setFilteredTailors(filtered);
     setCurrentPage(1);
   }, [tailors, searchTerm, statusFilter]);
 
-  // Paginated data
   const paginatedTailors = paginate(filteredTailors, currentPage, pageSize);
   const totalPages = getTotalPages(filteredTailors.length, pageSize);
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1); 
   };
 
-  // Count pending tailors
-  const pendingCount = tailors.filter(t => t.status === 'pending').length;
-
-  const handleAdd = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      skills: '',
-      specialization: '',
-    });
-    setShowAddModal(true);
-  };
-
-  const handleEdit = (tailor) => {
-    setSelectedTailor(tailor);
-    setFormData({
-      name: tailor.name || '',
-      email: tailor.email || '',
-      phone: tailor.phone || '',
-      address: tailor.address || '',
-      skills: Array.isArray(tailor.skills) ? tailor.skills.join(', ') : '',
-      specialization: Array.isArray(tailor.specialization)
-        ? tailor.specialization.join(', ')
-        : '',
-    });
-    setShowEditModal(true);
-  };
+  const pendingCount = tailors.filter(t => t.status === 0).length;
 
   const handleView = (tailor) => {
     navigate(`/tailors/${tailor.id}`);
@@ -143,48 +91,6 @@ const Tailors = () => {
     );
   };
 
-  const handleSuspend = async (tailor) => {
-    await execute(
-      () => suspendTailor(tailor.id),
-      `${tailor.name} has been suspended`
-    );
-  };
-
-  const handleActivate = async (tailor) => {
-    await execute(
-      () => activateTailor(tailor.id),
-      `${tailor.name} has been activated`
-    );
-  };
-
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault();
-    const data = {
-      ...formData,
-      skills: formData.skills.split(',').map(s => s.trim()),
-      specialization: formData.specialization.split(',').map(s => s.trim()),
-    };
-    await execute(() => addTailor(data), 'Tailor added successfully');
-    setShowAddModal(false);
-  };
-
-  const handleSubmitEdit = async (e) => {
-    e.preventDefault();
-    const data = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      skills: formData.skills.split(',').map(s => s.trim()),
-      specialization: formData.specialization.split(',').map(s => s.trim()),
-    };
-    await execute(
-      () => updateTailor(selectedTailor.id, data),
-      'Tailor updated successfully'
-    );
-    setShowEditModal(false);
-  };
-
   const handleDelete = async () => {
     await execute(
       () => deleteTailor(selectedTailor.id),
@@ -195,11 +101,9 @@ const Tailors = () => {
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
-    { value: USER_STATUSES.PENDING, label: 'Pending' },
-    { value: USER_STATUSES.APPROVED, label: 'Approved' },
-    { value: USER_STATUSES.ACTIVE, label: 'Active' },
-    { value: USER_STATUSES.SUSPENDED, label: 'Suspended' },
-    { value: USER_STATUSES.REJECTED, label: 'Rejected' },
+    { value: 0, label: 'Pending' },
+    { value: 1, label: 'Approved' },
+    { value: 2, label: 'Rejected' },
   ];
 
   const columns = [
@@ -234,98 +138,53 @@ const Tailors = () => {
       render: (row) => `PKR ${(row.totalEarnings || 0).toLocaleString()}`,
     },
     {
-      header: 'Rating',
-      render: (row) => (row.rating || 0).toFixed(1) + ' ⭐',
-    },
-    {
       header: 'Actions',
       render: (row) => (
-        <div className="flex space-x-1">
-          {row.status === 'pending' && (
+        <div className="flex items-center gap-1">
+          {row.status === 0 && (
             <>
-              <Button
-                size="sm"
-                variant="success"
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleApprove(row);
                 }}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                 title="Approve"
               >
                 <CheckCircle className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
+              </button>
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleReject(row);
                 }}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="Reject"
               >
                 <XCircle className="w-4 h-4" />
-              </Button>
+              </button>
             </>
           )}
-          {(row.status === 'approved' || row.status === 'active') && (
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSuspend(row);
-              }}
-              title="Suspend"
-            >
-              <Ban className="w-4 h-4" />
-            </Button>
-          )}
-          {row.status === 'suspended' && (
-            <Button
-              size="sm"
-              variant="success"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleActivate(row);
-              }}
-              title="Activate"
-            >
-              <PlayCircle className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={Eye}
+          <button
             onClick={(e) => {
               e.stopPropagation();
               handleView(row);
             }}
+            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="View"
           >
-            View
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={Edit}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(row);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteClick(row);
             }}
-            className="text-red-600 hover:text-red-700"
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       ),
     },
@@ -350,9 +209,6 @@ const Tailors = () => {
               Manage all tailors ({tailors.length} total, {pendingCount} pending approval)
             </p>
           </div>
-          <Button icon={Plus} onClick={handleAdd}>
-            Add Tailor
-          </Button>
         </div>
 
         {/* Pending Approvals Alert */}
@@ -383,7 +239,7 @@ const Tailors = () => {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <SearchBar
             value={searchTerm}
             onChange={setSearchTerm}
@@ -412,71 +268,6 @@ const Tailors = () => {
             totalItems={filteredTailors.length}
           />
         </div>
-
-        {/* Add/Edit Modal */}
-        <Modal
-          isOpen={showAddModal || showEditModal}
-          onClose={() => {
-            setShowAddModal(false);
-            setShowEditModal(false);
-          }}
-          title={showAddModal ? 'Add New Tailor' : 'Edit Tailor'}
-        >
-          <form onSubmit={showAddModal ? handleSubmitAdd : handleSubmitEdit} className="space-y-4">
-            <Input
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-            <Input
-              label="Phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              required
-            />
-            <Input
-              label="Address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              required
-            />
-            <Input
-              label="Skills (comma-separated)"
-              value={formData.skills}
-              onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-              placeholder="e.g. Stitching, Embroidery, Alterations"
-            />
-            <Input
-              label="Specialization (comma-separated)"
-              value={formData.specialization}
-              onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-              placeholder="e.g. Men's Suits, Women's Dresses"
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setShowEditModal(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" loading={actionLoading}>
-                {showAddModal ? 'Add Tailor' : 'Update Tailor'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
 
         {/* Delete Confirmation */}
         <ConfirmDialog

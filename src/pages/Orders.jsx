@@ -16,11 +16,9 @@ import {
   getOrders,
   addOrder,
   updateOrderStatus,
-  assignTailor,
   assignRider,
   cancelOrder,
   listenToOrders,
-  getApprovedTailors,
   getActiveRiders,
   getCustomers,
 } from '../lib/firebase';
@@ -44,13 +42,11 @@ const Orders = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showAssignTailorModal, setShowAssignTailorModal] = useState(false);
   const [showAssignRiderModal, setShowAssignRiderModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [tailors, setTailors] = useState([]);
   const [riders, setRiders] = useState([]);
   const [customers, setCustomers] = useState([]);
 
@@ -61,7 +57,6 @@ const Orders = () => {
   });
 
   const [assignData, setAssignData] = useState({
-    tailorId: '',
     riderId: '',
     newStatus: '',
     cancelReason: '',
@@ -69,16 +64,13 @@ const Orders = () => {
 
   const { execute, loading: actionLoading } = useAsyncOperation();
 
-  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tailorsData, ridersData, customersData] = await Promise.all([
-          getApprovedTailors(),
+        const [ridersData, customersData] = await Promise.all([
           getActiveRiders(),
           getCustomers(),
         ]);
-        setTailors(tailorsData);
         setRiders(ridersData);
         setCustomers(customersData);
       } catch (error) {
@@ -89,7 +81,6 @@ const Orders = () => {
     fetchData();
   }, []);
 
-  // Real-time listener for orders
   useEffect(() => {
     const unsubscribe = listenToOrders((data) => {
       setOrders(data);
@@ -99,7 +90,6 @@ const Orders = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter orders
   useEffect(() => {
     let filtered = orders;
 
@@ -118,7 +108,7 @@ const Orders = () => {
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1); 
   };
 
   const handleAdd = () => {
@@ -128,12 +118,6 @@ const Orders = () => {
 
   const handleView = (order) => {
     navigate(`/orders/${order.id}`);
-  };
-
-  const handleAssignTailor = (order) => {
-    setSelectedOrder(order);
-    setAssignData({ ...assignData, tailorId: '' });
-    setShowAssignTailorModal(true);
   };
 
   const handleAssignRider = (order) => {
@@ -165,15 +149,6 @@ const Orders = () => {
     };
     await execute(() => addOrder(data), 'Order created successfully');
     setShowAddModal(false);
-  };
-
-  const handleSubmitAssignTailor = async (e) => {
-    e.preventDefault();
-    await execute(
-      () => assignTailor(selectedOrder.id, assignData.tailorId),
-      'Tailor assigned successfully'
-    );
-    setShowAssignTailorModal(false);
   };
 
   const handleSubmitAssignRider = async (e) => {
@@ -260,19 +235,7 @@ const Orders = () => {
           >
             View
           </Button>
-          {!row.tailor_id && row.status === 0 && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAssignTailor(row);
-              }}
-            >
-              Assign Tailor
-            </Button>
-          )}
-          {row.tailor_id && !row.rider_id && (
+          {row.status === 0 && !row.rider_id && (
             <Button
               size="sm"
               variant="primary"
@@ -284,8 +247,8 @@ const Orders = () => {
               Assign Rider
             </Button>
           )}
-          {row.status !== -2 && row.status !== 10 && (
-            <>
+          <>
+            {row.status !== 10 && row.status !== 11 && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -297,6 +260,8 @@ const Orders = () => {
               >
                 Update
               </Button>
+            )}
+            {row.status !== -3 && row.status !== 10 && row.status !== 11 && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -309,8 +274,8 @@ const Orders = () => {
               >
                 Cancel
               </Button>
-            </>
-          )}
+            )}
+          </>
         </div>
       ),
     },
@@ -407,33 +372,6 @@ const Orders = () => {
               </Button>
               <Button type="submit" loading={actionLoading}>
                 Create Order
-              </Button>
-            </div>
-          </form>
-        </Modal>
-
-        {/* Assign Tailor Modal */}
-        <Modal
-          isOpen={showAssignTailorModal}
-          onClose={() => setShowAssignTailorModal(false)}
-          title="Assign Tailor"
-          size="sm"
-        >
-          <form onSubmit={handleSubmitAssignTailor} className="space-y-4">
-            <Select
-              label="Select Tailor"
-              value={assignData.tailorId}
-              onChange={(e) => setAssignData({ ...assignData, tailorId: e.target.value })}
-              options={tailors.map(t => ({ value: t.id, label: `${t.name} (${t.specialization?.join(', ')})` }))}
-              placeholder="Choose a tailor"
-              required
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button type="button" variant="secondary" onClick={() => setShowAssignTailorModal(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={actionLoading}>
-                Assign Tailor
               </Button>
             </div>
           </form>

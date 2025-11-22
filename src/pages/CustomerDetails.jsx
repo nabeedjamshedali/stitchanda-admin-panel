@@ -13,7 +13,6 @@ import {
   User,
   MapPin,
   ShoppingBag,
-  Star,
   Calendar,
   Edit,
   Trash2,
@@ -38,6 +37,7 @@ const CustomerDetails = () => {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [viewingImage, setViewingImage] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -89,7 +89,6 @@ const CustomerDetails = () => {
       phone: formData.phone,
     };
 
-    // Preserve address structure
     if (formData.address) {
       if (customer.address && typeof customer.address === 'object') {
         updates.address = {
@@ -107,7 +106,6 @@ const CustomerDetails = () => {
     );
     setShowEditModal(false);
 
-    // Refresh customer data
     const updated = await getCustomerById(id);
     setCustomer(updated);
   };
@@ -143,7 +141,6 @@ const CustomerDetails = () => {
     );
   }
 
-  // Order history columns
   const orderColumns = [
     {
       header: 'Order ID',
@@ -217,7 +214,7 @@ const CustomerDetails = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -245,20 +242,6 @@ const CustomerDetails = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Rating</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {customer.review || 0} ⭐
-                  </p>
-                </div>
-                <Star className="w-12 h-12 text-yellow-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Personal Information */}
@@ -274,7 +257,8 @@ const CustomerDetails = () => {
                 <img
                   src={customer.profileImagePath}
                   alt={customer.name}
-                  className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setViewingImage(customer.profileImagePath)}
                 />
               </div>
             )}
@@ -302,14 +286,6 @@ const CustomerDetails = () => {
               label="Full Address"
               value={customer.address?.fullAddress || customer.address || 'N/A'}
             />
-            {customer.address?.latitude && customer.address?.longitude && (
-              <div>
-                <div className="text-sm font-medium text-gray-500 mb-1">Coordinates</div>
-                <p className="text-gray-900 text-sm">
-                  {customer.address.latitude}, {customer.address.longitude}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -427,6 +403,27 @@ const CustomerDetails = () => {
             </div>
           </div>
         </Modal>
+
+        {/* Image Viewer Modal */}
+        {viewingImage && (
+          <Modal
+            isOpen={!!viewingImage}
+            onClose={() => setViewingImage(null)}
+            title="Image Preview"
+            size="lg"
+          >
+            <div className="flex items-center justify-center">
+              <img
+                src={viewingImage}
+                alt="Full size preview"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
+                }}
+              />
+            </div>
+          </Modal>
+        )}
       </div>
     </Layout>
   );

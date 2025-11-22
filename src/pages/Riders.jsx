@@ -7,20 +7,13 @@ import SearchBar from '../components/shared/SearchBar';
 import Select from '../components/shared/Select';
 import Pagination from '../components/shared/Pagination';
 import Loading from '../components/shared/Loading';
-import Modal from '../components/shared/Modal';
-import Input from '../components/shared/Input';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import StatusBadge from '../components/shared/StatusBadge';
-import { Plus, Edit, Trash2, Eye, CheckCircle, XCircle, Ban, PlayCircle } from 'lucide-react';
+import { Trash2, Eye, CheckCircle, XCircle } from 'lucide-react';
 import {
-  getRiders,
-  addRider,
-  updateRider,
   deleteRider,
   approveRider,
   rejectRider,
-  suspendRider,
-  activateRider,
   listenToRiders,
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
@@ -37,16 +30,8 @@ const Riders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
   const [selectedRider, setSelectedRider] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-  });
 
   const { execute, loading: actionLoading } = useAsyncOperation();
 
@@ -63,7 +48,7 @@ const Riders = () => {
     let filtered = riders;
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(rider => rider.status === statusFilter);
+      filtered = filtered.filter(rider => rider.status === Number(statusFilter));
     }
 
     filtered = filterBySearch(filtered, searchTerm, ['name', 'email', 'phone', 'vehicleNumber']);
@@ -77,29 +62,10 @@ const Riders = () => {
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1); 
   };
 
-  const pendingCount = riders.filter(r => r.status === 'pending').length;
-
-  const handleAdd = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-    });
-    setShowAddModal(true);
-  };
-
-  const handleEdit = (rider) => {
-    setSelectedRider(rider);
-    setFormData({
-      name: rider.name || '',
-      email: rider.email || '',
-      phone: rider.phone || '',
-    });
-    setShowEditModal(true);
-  };
+  const pendingCount = riders.filter(r => r.status === 0).length;
 
   const handleView = (rider) => {
     navigate(`/riders/${rider.id}`);
@@ -124,35 +90,6 @@ const Riders = () => {
     );
   };
 
-  const handleSuspend = async (rider) => {
-    await execute(
-      () => suspendRider(rider.id),
-      `${rider.name} has been suspended`
-    );
-  };
-
-  const handleActivate = async (rider) => {
-    await execute(
-      () => activateRider(rider.id),
-      `${rider.name} has been activated`
-    );
-  };
-
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault();
-    await execute(() => addRider(formData), 'Rider added successfully');
-    setShowAddModal(false);
-  };
-
-  const handleSubmitEdit = async (e) => {
-    e.preventDefault();
-    await execute(
-      () => updateRider(selectedRider.id, formData),
-      'Rider updated successfully'
-    );
-    setShowEditModal(false);
-  };
-
   const handleDelete = async () => {
     await execute(
       () => deleteRider(selectedRider.id),
@@ -163,11 +100,9 @@ const Riders = () => {
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
-    { value: USER_STATUSES.PENDING, label: 'Pending' },
-    { value: USER_STATUSES.APPROVED, label: 'Approved' },
-    { value: USER_STATUSES.ACTIVE, label: 'Active' },
-    { value: USER_STATUSES.SUSPENDED, label: 'Suspended' },
-    { value: USER_STATUSES.REJECTED, label: 'Rejected' },
+    { value: 0, label: 'Pending' },
+    { value: 1, label: 'Approved' },
+    { value: 2, label: 'Rejected' },
   ];
 
   const columns = [
@@ -202,106 +137,53 @@ const Riders = () => {
       render: (row) => row.totalDeliveries || 0,
     },
     {
-      header: 'Rating',
-      render: (row) => (row.rating || 0).toFixed(1) + ' ⭐',
-    },
-    {
-      header: 'Available',
-      render: (row) => (
-        <span className={row.currentlyAvailable ? 'text-green-600' : 'text-gray-400'}>
-          {row.currentlyAvailable ? '● Online' : '○ Offline'}
-        </span>
-      ),
-    },
-    {
       header: 'Actions',
       render: (row) => (
-        <div className="flex space-x-1">
-          {row.status === 'pending' && (
+        <div className="flex items-center gap-1">
+          {row.status === 0 && (
             <>
-              <Button
-                size="sm"
-                variant="success"
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleApprove(row);
                 }}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                 title="Approve"
               >
                 <CheckCircle className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
+              </button>
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleReject(row);
                 }}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="Reject"
               >
                 <XCircle className="w-4 h-4" />
-              </Button>
+              </button>
             </>
           )}
-          {(row.status === 'approved' || row.status === 'active') && (
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSuspend(row);
-              }}
-              title="Suspend"
-            >
-              <Ban className="w-4 h-4" />
-            </Button>
-          )}
-          {row.status === 'suspended' && (
-            <Button
-              size="sm"
-              variant="success"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleActivate(row);
-              }}
-              title="Activate"
-            >
-              <PlayCircle className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={Eye}
+          <button
             onClick={(e) => {
               e.stopPropagation();
               handleView(row);
             }}
+            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="View"
           >
-            View
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={Edit}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(row);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteClick(row);
             }}
-            className="text-red-600 hover:text-red-700"
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       ),
     },
@@ -326,9 +208,6 @@ const Riders = () => {
               Manage all riders ({riders.length} total, {pendingCount} pending approval)
             </p>
           </div>
-          <Button icon={Plus} onClick={handleAdd}>
-            Add Rider
-          </Button>
         </div>
 
         {/* Pending Approvals Alert */}
@@ -350,7 +229,7 @@ const Riders = () => {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <SearchBar
             value={searchTerm}
             onChange={setSearchTerm}
@@ -379,53 +258,6 @@ const Riders = () => {
             totalItems={filteredRiders.length}
           />
         </div>
-
-        {/* Add/Edit Modal */}
-        <Modal
-          isOpen={showAddModal || showEditModal}
-          onClose={() => {
-            setShowAddModal(false);
-            setShowEditModal(false);
-          }}
-          title={showAddModal ? 'Add New Rider' : 'Edit Rider'}
-        >
-          <form onSubmit={showAddModal ? handleSubmitAdd : handleSubmitEdit} className="space-y-4">
-            <Input
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-            <Input
-              label="Phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              required
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setShowEditModal(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" loading={actionLoading}>
-                {showAddModal ? 'Add Rider' : 'Update Rider'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
 
         {/* Delete Confirmation */}
         <ConfirmDialog

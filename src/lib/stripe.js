@@ -1,12 +1,7 @@
 import Stripe from 'stripe';
 
-// Initialize Stripe with secret key from environment
 const stripe = new Stripe(import.meta.env.VITE_STRIPE_SECRET_KEY);
 
-/**
- * Fetch all balance transactions from Stripe
- * This includes all successful charges, refunds, transfers, etc.
- */
 export const getStripeBalance = async () => {
   try {
     const balance = await stripe.balance.retrieve();
@@ -17,10 +12,7 @@ export const getStripeBalance = async () => {
   }
 };
 
-/**
- * Fetch all payment intents (charges) from Stripe
- * @param {number} limit - Number of payments to fetch (default: 100)
- */
+
 export const getStripePayments = async (limit = 100) => {
   try {
     const charges = await stripe.charges.list({
@@ -29,9 +21,9 @@ export const getStripePayments = async (limit = 100) => {
 
     return charges.data.map(charge => ({
       id: charge.id,
-      amount: charge.amount / 100, // Convert from cents to dollars/PKR
+      amount: charge.amount / 100, 
       currency: charge.currency.toUpperCase(),
-      status: charge.status, // succeeded, pending, failed
+      status: charge.status, 
       paid: charge.paid,
       customerEmail: charge.billing_details?.email || charge.receipt_email,
       customerName: charge.billing_details?.name || '-',
@@ -46,17 +38,12 @@ export const getStripePayments = async (limit = 100) => {
   }
 };
 
-/**
- * Calculate total revenue from Stripe
- * Gets all successful charges and sums them up
- */
 export const getTotalRevenue = async () => {
   try {
     let totalRevenue = 0;
     let hasMore = true;
     let startingAfter = null;
 
-    // Paginate through all charges
     while (hasMore) {
       const params = {
         limit: 100,
@@ -65,7 +52,6 @@ export const getTotalRevenue = async () => {
 
       const charges = await stripe.charges.list(params);
 
-      // Sum up successful charges
       charges.data.forEach(charge => {
         if (charge.status === 'succeeded' && charge.paid) {
           totalRevenue += charge.amount;
@@ -78,7 +64,6 @@ export const getTotalRevenue = async () => {
       }
     }
 
-    // Convert from cents to main currency unit
     return totalRevenue / 100;
   } catch (error) {
     console.error('Error calculating total revenue:', error);
@@ -86,9 +71,6 @@ export const getTotalRevenue = async () => {
   }
 };
 
-/**
- * Get payment statistics from Stripe
- */
 export const getPaymentStatistics = async () => {
   try {
     const charges = await stripe.charges.list({ limit: 100 });
@@ -129,9 +111,7 @@ export const getPaymentStatistics = async () => {
   }
 };
 
-/**
- * Search for a specific payment by charge ID
- */
+
 export const getPaymentById = async (chargeId) => {
   try {
     const charge = await stripe.charges.retrieve(chargeId);

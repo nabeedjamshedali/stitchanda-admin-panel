@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatDateTime } from '../../utils/helpers';
+import { ORDER_STATUS_LABELS } from '../../constants';
 import { Clock } from 'lucide-react';
 
 const RecentActivity = ({ orders = [] }) => {
@@ -25,14 +26,14 @@ const RecentActivity = ({ orders = [] }) => {
                   Order #{order.id.substring(0, 8)}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {order.customerName || 'Customer'} - {order.status}
+                  {order.customerName || 'Unknown Customer'}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {formatDateTime(order.createdAt)}
+                  {ORDER_STATUS_LABELS[order.status] || 'Unknown Status'} • {formatDateTime(order.created_at)}
                 </p>
               </div>
               <div className="text-sm font-medium text-primary-600">
-                PKR {order.totalAmount?.toLocaleString() || '0'}
+                PKR {(order.total_price || 0).toLocaleString()}
               </div>
             </div>
           ))

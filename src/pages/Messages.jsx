@@ -25,27 +25,24 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'tailor', 'rider', 'customer'
+  const [filter, setFilter] = useState('all'); 
   const messagesEndRef = useRef(null);
 
-  // New conversation modal state
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [allUsers, setAllUsers] = useState({ customers: [], tailors: [], riders: [] });
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedUserType, setSelectedUserType] = useState('all');
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Fetch conversations on mount
   useEffect(() => {
     const fetchConversations = async () => {
       try {
         setLoading(true);
-        const adminId = user?.uid || 'admin_id'; // Use actual admin ID from auth
+        const adminId = user?.uid || 'admin_id'; 
         const convos = await getAdminConversations(adminId);
         setConversations(convos || []);
       } catch (error) {
         console.error('Error fetching conversations:', error);
-        // Don't show error toast if it's just missing index - conversations will be empty
         if (error.code !== 'failed-precondition') {
           toast.error('Failed to load conversations');
         }
@@ -58,7 +55,6 @@ const Messages = () => {
     fetchConversations();
   }, [user]);
 
-  // Listen to messages in selected conversation
   useEffect(() => {
     if (!selectedConversation) return;
 
@@ -68,7 +64,6 @@ const Messages = () => {
         setMessages(msgs);
         scrollToBottom();
 
-        // Mark messages as read
         const adminId = user?.uid || 'admin_id';
         markMessagesAsRead(selectedConversation.id, adminId).catch(console.error);
       }
@@ -81,7 +76,6 @@ const Messages = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Load users when opening new chat modal
   const handleOpenNewChat = async () => {
     setShowNewChatModal(true);
     setLoadingUsers(true);
@@ -96,23 +90,19 @@ const Messages = () => {
     }
   };
 
-  // Start conversation with selected user
   const handleStartConversation = async (selectedUser) => {
     try {
-      const adminId = user?.uid || 'admin_id';
+      const adminId = "XgOkNWeAWWVV5VgQlIO1";
 
-      // Find or create conversation
       const conversationId = await findOrCreateConversation(
         adminId,
         selectedUser.id,
         selectedUser.type
       );
 
-      // Refresh conversations
       const convos = await getAdminConversations(adminId);
       setConversations(convos || []);
 
-      // Select the conversation
       const newConversation = convos.find(c => c.id === conversationId);
       if (newConversation) {
         setSelectedConversation(newConversation);

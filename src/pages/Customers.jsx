@@ -29,12 +29,10 @@ const Customers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Filter states
   const [genderFilter, setGenderFilter] = useState('all');
   const [orderRangeFilter, setOrderRangeFilter] = useState('all');
   const [spentRangeFilter, setSpentRangeFilter] = useState('all');
 
-  // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -48,7 +46,6 @@ const Customers = () => {
 
   const { execute, loading: actionLoading } = useAsyncOperation();
 
-  // Real-time listener for customers
   useEffect(() => {
     const unsubscribe = listenToCustomers((data) => {
       setCustomers(data);
@@ -58,16 +55,13 @@ const Customers = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter customers when search term or filters change
   useEffect(() => {
     let filtered = filterBySearch(customers, searchTerm, ['name', 'email', 'phone']);
 
-    // Gender filter
     if (genderFilter !== 'all') {
       filtered = filtered.filter(c => c.gender?.toLowerCase() === genderFilter.toLowerCase());
     }
 
-    // Order range filter
     if (orderRangeFilter === '0') {
       filtered = filtered.filter(c => (c.totalOrders || 0) === 0);
     } else if (orderRangeFilter === '1-5') {
@@ -76,7 +70,6 @@ const Customers = () => {
       filtered = filtered.filter(c => (c.totalOrders || 0) > 5);
     }
 
-    // Spent range filter
     if (spentRangeFilter === '0') {
       filtered = filtered.filter(c => (c.totalSpent || 0) === 0);
     } else if (spentRangeFilter === '<5000') {
@@ -88,16 +81,15 @@ const Customers = () => {
     }
 
     setFilteredCustomers(filtered);
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1); 
   }, [customers, searchTerm, genderFilter, orderRangeFilter, spentRangeFilter]);
 
-  // Paginated data
   const paginatedCustomers = paginate(filteredCustomers, currentPage, pageSize);
   const totalPages = getTotalPages(filteredCustomers.length, pageSize);
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1); 
   };
 
   const handleEdit = (customer) => {
@@ -123,14 +115,12 @@ const Customers = () => {
   const handleSubmitEdit = async (e) => {
     e.preventDefault();
 
-    // Only update fields that have values, preserve address structure
     const updates = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
     };
 
-    // If address is being updated, preserve the object structure
     if (formData.address) {
       if (selectedCustomer.address && typeof selectedCustomer.address === 'object') {
         updates.address = {

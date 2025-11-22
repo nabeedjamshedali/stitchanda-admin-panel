@@ -5,7 +5,6 @@ import Button from '../components/shared/Button';
 import Loading from '../components/shared/Loading';
 import StatusBadge from '../components/shared/StatusBadge';
 import Modal from '../components/shared/Modal';
-import Input from '../components/shared/Input';
 import Table from '../components/shared/Table';
 import StatusUpdateModal from '../components/shared/StatusUpdateModal';
 import { Card, CardHeader, CardTitle, CardContent, InfoRow } from '../components/shared/Card';
@@ -13,9 +12,7 @@ import {
   ArrowLeft,
   User,
   Bike,
-  Star,
   Calendar,
-  Edit,
   Trash2,
   AlertCircle,
   CheckCircle,
@@ -26,12 +23,10 @@ import {
 } from 'lucide-react';
 import {
   getRiderById,
-  updateRider,
   deleteRider,
   approveRider,
   rejectRider,
-  suspendRider,
-  activateRider,
+  pendingRider,
 } from '../lib/firebase';
 import { useAsyncOperation } from '../hooks/useFirestore';
 import { formatDate } from '../utils/helpers';
@@ -44,15 +39,9 @@ const RiderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-  });
+  const [viewingImage, setViewingImage] = useState(null);
 
   const { execute, loading: actionLoading } = useAsyncOperation();
 
@@ -67,11 +56,6 @@ const RiderDetails = () => {
           return;
         }
         setRider(riderData);
-        setFormData({
-          name: riderData.name || '',
-          email: riderData.email || '',
-          phone: riderData.phone || '',
-        });
       } catch (err) {
         console.error('Error fetching rider:', err);
         setError('Failed to load rider details');
@@ -82,19 +66,6 @@ const RiderDetails = () => {
 
     fetchRiderData();
   }, [id]);
-
-  const handleEdit = () => setShowEditModal(true);
-
-  const handleSubmitEdit = async (e) => {
-    e.preventDefault();
-    await execute(
-      () => updateRider(rider.id, formData),
-      'Rider updated successfully'
-    );
-    setShowEditModal(false);
-    const updated = await getRiderById(id);
-    setRider(updated);
-  };
 
   const handleDelete = async () => {
     await execute(
@@ -123,37 +94,18 @@ const RiderDetails = () => {
     setRider(updated);
   };
 
-  const handleSuspend = async () => {
-    await execute(
-      () => suspendRider(rider.id),
-      `${rider.name} has been suspended`
-    );
-    const updated = await getRiderById(id);
-    setRider(updated);
-  };
-
-  const handleActivate = async () => {
-    await execute(
-      () => activateRider(rider.id),
-      `${rider.name} has been activated`
-    );
-    const updated = await getRiderById(id);
-    setRider(updated);
-  };
-
   const handleStatusUpdate = async (formData) => {
     const statusMap = {
-      'approved': approveRider,
-      'rejected': rejectRider,
-      'suspended': suspendRider,
-      'active': activateRider,
+      0: pendingRider,  
+      1: approveRider,  
+      2: rejectRider,   
     };
 
     const updateFunction = statusMap[formData.status];
     if (updateFunction) {
       await execute(
         () => updateFunction(rider.id),
-        `Rider status updated to ${formData.status}`
+        `Rider status updated successfully`
       );
       setShowStatusModal(false);
       const updated = await getRiderById(id);
@@ -163,13 +115,11 @@ const RiderDetails = () => {
 
   const getStatusOptions = () => {
     const allOptions = [
-      { value: 'approved', label: 'Approved' },
-      { value: 'rejected', label: 'Rejected' },
-      { value: 'suspended', label: 'Suspended' },
-      { value: 'active', label: 'Active' },
+      { value: 0, label: 'Pending' },
+      { value: 1, label: 'Approved' },
+      { value: 2, label: 'Rejected' },
     ];
 
-    // Filter out current status
     return allOptions.filter(opt => opt.value !== rider.status);
   };
 
@@ -239,11 +189,6 @@ const RiderDetails = () => {
             </Button>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{rider.name}</h2>
-              <p className="text-gray-600 mt-1">
-                <span className={rider.currentlyAvailable ? 'text-green-600' : 'text-gray-400'}>
-                  {rider.currentlyAvailable ? '● Online' : '○ Offline'}
-                </span>
-              </p>
             </div>
           </div>
 
@@ -255,9 +200,6 @@ const RiderDetails = () => {
             >
               Update Status
             </Button>
-            <Button variant="ghost" icon={Edit} onClick={handleEdit}>
-              Edit
-            </Button>
             <Button variant="ghost" icon={Trash2} onClick={() => setShowDeleteDialog(true)} className="text-red-600">
               Delete
             </Button>
@@ -265,7 +207,7 @@ const RiderDetails = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -289,18 +231,6 @@ const RiderDetails = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Rating</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{(rider.rating || 0).toFixed(1)} ⭐</p>
-                </div>
-                <Star className="w-12 h-12 text-yellow-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Personal Information */}
@@ -309,6 +239,63 @@ const RiderDetails = () => {
             <CardTitle icon={User}>Personal Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Profile Picture and CNIC Section */}
+            <div className="space-y-6 pb-6 border-b">
+              {/* Profile Picture */}
+              <div>
+                <div className="text-sm font-medium text-gray-500 mb-2">Profile Picture</div>
+                {rider.profile_image_path ? (
+                  <div
+                    className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-gray-200 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setViewingImage(rider.profile_image_path)}
+                  >
+                    <img
+                      src={rider.profile_image_path}
+                      alt={`${rider.name}'s profile`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 rounded-lg bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
+                    <div className="text-center">
+                      <User className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No Image</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* CNIC Image */}
+              <div>
+                <div className="text-sm font-medium text-gray-500 mb-2">CNIC Image</div>
+                {rider.cnic_image_path ? (
+                  <div
+                    className="relative w-64 h-48 rounded-lg overflow-hidden border-2 border-gray-200 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setViewingImage(rider.cnic_image_path)}
+                  >
+                    <img
+                      src={rider.cnic_image_path}
+                      alt="CNIC"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/300x200?text=No+CNIC+Image';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-64 h-48 rounded-lg bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
+                    <div className="text-center">
+                      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No CNIC Image</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <InfoRow label="Full Name" value={rider.name} />
               <div>
@@ -379,43 +366,6 @@ const RiderDetails = () => {
           </CardContent>
         </Card>
 
-        {/* Edit Modal */}
-        <Modal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          title="Edit Rider"
-        >
-          <form onSubmit={handleSubmitEdit} className="space-y-4">
-            <Input
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-            <Input
-              label="Phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              required
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button type="button" variant="secondary" onClick={() => setShowEditModal(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={actionLoading}>
-                Update Rider
-              </Button>
-            </div>
-          </form>
-        </Modal>
-
         {/* Status Update Modal */}
         <StatusUpdateModal
           isOpen={showStatusModal}
@@ -448,6 +398,27 @@ const RiderDetails = () => {
             </div>
           </div>
         </Modal>
+
+        {/* Image Viewer Modal */}
+        {viewingImage && (
+          <Modal
+            isOpen={!!viewingImage}
+            onClose={() => setViewingImage(null)}
+            title="Image Preview"
+            size="lg"
+          >
+            <div className="flex items-center justify-center">
+              <img
+                src={viewingImage}
+                alt="Full size preview"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
+                }}
+              />
+            </div>
+          </Modal>
+        )}
       </div>
     </Layout>
   );
