@@ -11,7 +11,6 @@ const Pagination = ({
 }) => {
   const pages = [];
 
-  // Generate page numbers
   for (let i = 1; i <= totalPages; i++) {
     if (
       i === 1 ||
@@ -24,7 +23,6 @@ const Pagination = ({
     }
   }
 
-  // Calculate range display
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 

@@ -136,8 +136,8 @@ const Messages = () => {
 
       await sendMessage(selectedConversation.id, {
         sender_id: adminId,
-        sender_type: 'admin',
-        message: newMessage.trim(),
+        text: newMessage.trim(),
+        type: 'text',
       });
 
       setNewMessage('');
@@ -328,7 +328,8 @@ const Messages = () => {
                     </div>
                   ) : (
                     messages.map((msg) => {
-                      const isAdmin = msg.sender_type === 'admin';
+                      const adminId = user?.uid || 'admin_id';
+                      const isAdmin = msg.sender_id === adminId;
                       return (
                         <div
                           key={msg.id}
@@ -341,7 +342,7 @@ const Messages = () => {
                                 : 'bg-white text-gray-900 border border-gray-200'
                             }`}
                           >
-                            <p className="text-sm break-words">{msg.message}</p>
+                            <p className="text-sm break-words">{msg.text || msg.message}</p>
                             <p className={`text-xs mt-1 ${
                               isAdmin ? 'text-gray-300' : 'text-gray-500'
                             }`}>

@@ -5,24 +5,20 @@ import RevenueChart from '../components/dashboard/RevenueChart';
 import OrdersChart from '../components/dashboard/OrdersChart';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import Loading from '../components/shared/Loading';
-import Button from '../components/shared/Button';
 import {
   DollarSign,
   Users,
   Scissors,
   Bike,
   ShoppingBag,
-  Database,
 } from 'lucide-react';
 import { getStatistics, getOrders } from '../lib/firebase';
-import { seedSampleData } from '../utils/seedData';
-import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,13 +30,18 @@ const Dashboard = () => {
         ]);
 
         setStats(statistics);
-        // Sort orders by createdAt descending
+
+        // Sort orders by created_at descending
         const sortedOrders = orders.sort((a, b) => {
-          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+          const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
           return dateB - dateA;
         });
         setRecentOrders(sortedOrders);
+
+        // Calculate last 6 months revenue from real order data
+        const monthlyRevenue = calculateMonthlyRevenue(orders);
+        setRevenueData(monthlyRevenue);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -51,33 +52,41 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  const handleSeedData = async () => {
-    setSeeding(true);
-    try {
-      const result = await seedSampleData();
-      if (result.success) {
-        toast.success('Sample data added successfully!');
-        // Refresh dashboard data
-        const [statistics, orders] = await Promise.all([
-          getStatistics(),
-          getOrders(),
-        ]);
-        setStats(statistics);
-        const sortedOrders = orders.sort((a, b) => {
-          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
-          return dateB - dateA;
-        });
-        setRecentOrders(sortedOrders);
-      } else {
-        toast.error('Failed to add sample data');
-      }
-    } catch (error) {
-      console.error('Error seeding data:', error);
-      toast.error('Error: ' + error.message);
-    } finally {
-      setSeeding(false);
+  // Calculate revenue for last 6 months from orders
+  const calculateMonthlyRevenue = (orders) => {
+    const now = new Date();
+    const months = [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Generate last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        month: monthNames[date.getMonth()],
+        revenue: 0,
+        year: date.getFullYear(),
+        monthIndex: date.getMonth()
+      });
     }
+
+    // Calculate revenue for each month from completed orders (status >= 5)
+    // Admin gets 10% commission from each completed order
+    const ADMIN_COMMISSION_RATE = 0.10; // 10%
+
+    orders.forEach(order => {
+      if (order.status >= 5 && order.status <= 11 && order.created_at) { // Completed orders
+        const orderDate = order.created_at.toDate ? order.created_at.toDate() : new Date(order.created_at);
+        const monthData = months.find(m =>
+          m.year === orderDate.getFullYear() &&
+          m.monthIndex === orderDate.getMonth()
+        );
+        if (monthData) {
+          monthData.revenue += (order.total_price || 0) * ADMIN_COMMISSION_RATE;
+        }
+      }
+    });
+
+    return months.map(m => ({ month: m.month, revenue: m.revenue }));
   };
 
   if (loading) {
@@ -88,17 +97,7 @@ const Dashboard = () => {
     );
   }
 
-  // Mock data for revenue chart (last 6 months)
-  const revenueData = [
-    { month: 'Jan', revenue: 45000 },
-    { month: 'Feb', revenue: 52000 },
-    { month: 'Mar', revenue: 48000 },
-    { month: 'Apr', revenue: 61000 },
-    { month: 'May', revenue: 55000 },
-    { month: 'Jun', revenue: 67000 },
-  ];
-
-  // Order status distribution data
+  // Order status distribution data from real statistics
   const orderStatusData = [
     { name: 'Pending', value: stats?.pendingOrders || 0 },
     { name: 'In Progress', value: stats?.inProgressOrders || 0 },
@@ -109,28 +108,6 @@ const Dashboard = () => {
   return (
     <Layout title="Dashboard">
       <div className="space-y-6">
-        {/* Header with Seed Data Button */}
-        {(stats?.totalCustomers === 0 || stats?.totalOrders === 0) && (
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg flex items-center justify-between">
-            <div className="flex items-center">
-              <Database className="h-5 w-5 text-blue-400 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-blue-800">No data found in database</p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Click the button to add sample data or add data manually in other tabs
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="primary"
-              icon={Database}
-              onClick={handleSeedData}
-              loading={seeding}
-            >
-              Add Sample Data
-            </Button>
-          </div>
-        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

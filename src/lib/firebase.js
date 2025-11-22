@@ -14,7 +14,8 @@ import {
   onSnapshot,
   serverTimestamp,
   orderBy,
-  writeBatch
+  writeBatch,
+  arrayUnion
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
@@ -30,14 +31,12 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const analytics = getAnalytics(app);
 
-// ==================== CUSTOMERS CRUD ====================
-
+// Customer CRUD Operations
 export const getCustomers = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'customer'));
@@ -85,7 +84,6 @@ export const getCustomerById = async (id) => {
 
     const customer = { id: docSnap.id, ...docSnap.data() };
 
-    // Fetch orders to calculate totalOrders and totalSpent
     const orders = await getOrders();
     const customerId = customer.customerId || customer.id;
     const customerOrders = orders.filter(order => order.customer_id === customerId);
@@ -99,7 +97,7 @@ export const getCustomerById = async (id) => {
       ...customer,
       totalOrders,
       totalSpent,
-      orders: customerOrders // Include orders for history section
+      orders: customerOrders
     };
   } catch (error) {
     console.error('Error getting customer by ID:', error);
@@ -126,7 +124,6 @@ export const addCustomer = async (data) => {
       updatedAt: serverTimestamp()
     });
 
-    // Update document with customerId
     await updateDoc(docRef, {
       customerId: docRef.id
     });
@@ -174,7 +171,7 @@ export const searchCustomers = async (searchTerm) => {
   }
 };
 
-// ==================== TAILORS CRUD + APPROVAL ====================
+// Tailor CRUD Operations
 
 export const getTailors = async () => {
   try {
@@ -212,11 +209,11 @@ export const getTailorsByStatus = async (verification_status) => {
 };
 
 export const getPendingTailors = async () => {
-  return getTailorsByStatus(0); // 0 = pending
+  return getTailorsByStatus(0); 
 };
 
 export const getApprovedTailors = async () => {
-  return getTailorsByStatus(1); // 1 = approved
+  return getTailorsByStatus(1); 
 };
 
 export const getTailor = async (id) => {
@@ -244,7 +241,6 @@ export const getTailorById = async (id) => {
 
     const tailor = { id: docSnap.id, ...docSnap.data() };
 
-    // Fetch orders to calculate stats
     const orders = await getOrders();
     const tailorId = tailor.tailor_id || tailor.id;
     const tailorOrders = orders.filter(order => order.tailor_id === tailorId);
@@ -254,7 +250,6 @@ export const getTailorById = async (id) => {
       .filter(order => order.payment_status?.toLowerCase() === 'paid')
       .reduce((sum, order) => sum + (order.total_price || 0), 0);
 
-    // Determine status from DB fields
     let status = 'pending';
     if (tailor.is_verified === true) {
       status = tailor.availibility_status === true ? 'active' : 'suspended';
@@ -309,7 +304,6 @@ export const addTailor = async (data) => {
       updated_at: serverTimestamp()
     });
 
-    // Update document with tailor_id
     await updateDoc(docRef, {
       tailor_id: docRef.id
     });
@@ -366,8 +360,8 @@ export const suspendTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      is_verified: false,  // Suspend means not verified
-      availibility_status: false,  // Also mark as unavailable (note the typo in DB)
+      is_verified: false,  
+      availibility_status: false,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -380,8 +374,8 @@ export const activateTailor = async (id) => {
   try {
     const docRef = doc(db, 'tailor', id);
     await updateDoc(docRef, {
-      is_verified: true,  // Actual DB field
-      availibility_status: true,  // Mark as available (note the typo in DB)
+      is_verified: true,  
+      availibility_status: true,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -399,7 +393,7 @@ export const deleteTailor = async (id) => {
   }
 };
 
-// ==================== RIDERS CRUD + APPROVAL ====================
+// Rider CRUD Operations
 
 export const getRiders = async () => {
   try {
@@ -473,7 +467,6 @@ export const getRiderById = async (id) => {
 
     const rider = { id: docSnap.id, ...docSnap.data() };
 
-    // Fetch orders to calculate delivery stats
     const orders = await getOrders();
     const riderId = rider.driver_id || rider.id;
     const riderOrders = orders.filter(order => order.rider_id === riderId);
@@ -481,7 +474,6 @@ export const getRiderById = async (id) => {
     const totalDeliveries = riderOrders.length;
     const completedDeliveries = riderOrders.filter(order => order.status === 10).length;
 
-    // Determine status from DB fields
     let status = 'pending';
     if (rider.verification_status === 1) {
       status = rider.availiability_status === 1 ? 'active' : 'suspended';
@@ -516,7 +508,7 @@ export const addRider = async (data) => {
         latitude: data.current_location?.latitude || 0,
         longitude: data.current_location?.longitude || 0
       },
-      availiability_status: 0, // 0 = offline, 1 = online (note the typo in DB)
+      availiability_status: 0, // 0 = offline, 1 = online 
       is_assigned: 0, // 0 = no, 1 = yes
       verification_status: 0, // 0 = pending, 1 = approved, 2 = rejected
       rating: 0,
@@ -553,7 +545,7 @@ export const approveRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 1,  // Actual DB field (1 = verified)
+      verification_status: 1,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -566,7 +558,7 @@ export const rejectRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      verification_status: 2, // 2 = rejected
+      verification_status: 2, 
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -579,7 +571,7 @@ export const suspendRider = async (id) => {
   try {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
-      availiability_status: 0, // Mark as offline (note the typo in DB)
+      availiability_status: 0, 
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -593,7 +585,7 @@ export const activateRider = async (id) => {
     const docRef = doc(db, 'driver', id);
     await updateDoc(docRef, {
       verification_status: 1, // 1 = approved
-      availiability_status: 1, // Mark as online (note the typo in DB)
+      availiability_status: 1, // Mark as online 
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -611,7 +603,7 @@ export const deleteRider = async (id) => {
   }
 };
 
-// ==================== ORDER DETAILS (Metadata for Orders) ====================
+// Order Details
 
 export const getOrderDetailsByOrderId = async (orderId) => {
   try {
@@ -631,7 +623,6 @@ export const getOrderDetailsByOrderId = async (orderId) => {
   }
 };
 
-// ==================== ORDERS CRUD + STATUS MANAGEMENT ====================
 
 export const getOrders = async () => {
   try {
@@ -693,7 +684,6 @@ export const getOrderById = async (id) => {
 
     const order = { id: docSnap.id, ...docSnap.data() };
 
-    // Fetch related entities and order details to enrich order data
     const [customers, tailors, drivers, orderDetailsData] = await Promise.all([
       getCustomers(),
       getTailors(),
@@ -701,12 +691,10 @@ export const getOrderById = async (id) => {
       getOrderDetailsByOrderId(order.order_id || id)
     ]);
 
-    // Create lookup maps
     const customerMap = Object.fromEntries(customers.map(c => [c.customerId || c.id, c.name]));
     const tailorMap = Object.fromEntries(tailors.map(t => [t.tailor_id || t.id, t.name]));
     const driverMap = Object.fromEntries(drivers.map(d => [d.driver_id || d.id, d.name]));
 
-    // Enrich order with names and order details
     return {
       ...order,
       customerName: customerMap[order.customer_id] || 'Unknown Customer',
@@ -722,17 +710,15 @@ export const getOrderById = async (id) => {
 
 export const addOrder = async (data) => {
   try {
-    // Create a new doc reference to get the auto ID
     const orderRef = doc(collection(db, 'order'));
     const orderId = orderRef.id;
 
-    // Set the document with the ID matching order_id (matches actual DB schema)
     await setDoc(orderRef, {
       ...data,
-      order_id: orderId,           // Match docid with order_id field
-      status: 0,                   // New orders have status 0 (unassigned)
-      rider_id: '',                // Empty string for unassigned rider (as per actual DB)
-      payment_status: 'Pending',   // Capital P to match actual DB
+      order_id: orderId,           
+      status: 0,                   
+      rider_id: '',                
+      payment_status: 'Pending',  
       delivery_date: null,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp()
@@ -762,7 +748,7 @@ export const updateOrderStatus = async (id, status) => {
   try {
     const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
-      status,  // Numeric status value (0-11)
+      status,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -775,8 +761,8 @@ export const assignTailor = async (orderId, tailorId) => {
   try {
     const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
-      tailor_id: tailorId,  // Use snake_case to match DB schema
-      status: 4,  // RECEIVED_TAILOR status
+      tailor_id: tailorId,  
+      status: 4,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -789,8 +775,8 @@ export const assignRider = async (orderId, riderId) => {
   try {
     const docRef = doc(db, 'order', orderId);
     await updateDoc(docRef, {
-      rider_id: riderId,  // Use snake_case to match DB schema
-      status: 1,  // ASSIGNED_RIDER status
+      rider_id: riderId,  
+      status: 1,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -803,7 +789,7 @@ export const cancelOrder = async (id) => {
   try {
     const docRef = doc(db, 'order', id);
     await updateDoc(docRef, {
-      status: -2,  // CANCELLED status (numeric)
+      status: -2,  
       updated_at: serverTimestamp()
     });
   } catch (error) {
@@ -821,42 +807,17 @@ export const deleteOrder = async (id) => {
   }
 };
 
-// ==================== PAYMENTS ====================
-
-export const getPayments = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, 'payments'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('Error getting payments:', error);
-    throw error;
-  }
-};
-
-export const getPaymentsByOrder = async (orderId) => {
-  try {
-    const q = query(collection(db, 'payments'), where('orderId', '==', orderId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('Error getting payments by order:', error);
-    throw error;
-  }
-};
-
-// ==================== REAL-TIME LISTENERS ====================
+// Listeners for Real-time Updates
 
 export const listenToTailors = (callback) => {
   return onSnapshot(collection(db, 'tailor'), (snapshot) => {
     const tailors = snapshot.docs.map(doc => {
       const data = doc.data();
 
-      // Determine status based on is_verified and availibility_status
       let status = 'pending';
       if (data.is_verified === true) {
         status = data.availibility_status === true ? 'active' : 'suspended';
       } else if (data.is_verified === false) {
-        // Check if it was explicitly rejected or just pending
         status = data.updated_at ? 'rejected' : 'pending';
       }
 
@@ -864,11 +825,10 @@ export const listenToTailors = (callback) => {
         id: doc.id,
         tailor_id: data.tailor_id || doc.id,
         ...data,
-        // Map DB fields to UI-expected fields
-        specialization: data.category || [],  // Map category to specialization
-        skills: data.category || [],  // Use category as skills too
-        status: status,  // Derived from is_verified and availibility_status
-        rating: data.review || 0,  // Map review to rating
+        specialization: data.category || [],  
+        skills: data.category || [], 
+        status: status, 
+        rating: data.review || 0,  
         totalOrders: data.totalOrders || 0,
         totalEarnings: data.totalEarnings || 0,
         address: typeof data.address === 'object' ? data.address.full_address : data.address
@@ -883,12 +843,10 @@ export const listenToRiders = (callback) => {
     const riders = snapshot.docs.map(doc => {
       const data = doc.data();
 
-      // Determine status based on verification_status and availiability_status
       let status = 'pending';
       if (data.verification_status === 1) {
         status = data.availiability_status === 1 ? 'active' : 'suspended';
       } else if (data.verification_status === 0) {
-        // Check if it was explicitly rejected or just pending
         status = data.updated_at ? 'rejected' : 'pending';
       }
 
@@ -896,10 +854,9 @@ export const listenToRiders = (callback) => {
         id: doc.id,
         driver_id: data.driver_id || doc.id,
         ...data,
-        // Map DB fields to UI-expected fields
-        currentlyAvailable: data.availiability_status === 1,  // Note: typo in DB field name
-        status: status,  // Derived from verification_status and availiability_status
-        rating: data.review || 0,  // Use review field if rating doesn't exist
+        currentlyAvailable: data.availiability_status === 1,  
+        status: status,  
+        rating: data.review || 0, 
         totalDeliveries: data.totalDeliveries || 0
       };
     });
@@ -918,19 +875,16 @@ export const listenToOrders = (callback) => {
       };
     });
 
-    // Fetch all customers, tailors, and drivers to enrich orders with names
     const [customers, tailors, drivers] = await Promise.all([
       getCustomers(),
       getTailors(),
       getRiders()
     ]);
 
-    // Create lookup maps for quick access
     const customerMap = Object.fromEntries(customers.map(c => [c.customerId || c.id, c.name]));
     const tailorMap = Object.fromEntries(tailors.map(t => [t.tailor_id || t.id, t.name]));
     const driverMap = Object.fromEntries(drivers.map(d => [d.driver_id || d.id, d.name]));
 
-    // Enrich orders with names from related collections
     const enrichedOrders = orders.map(order => ({
       ...order,
       customerName: customerMap[order.customer_id] || 'Unknown Customer',
@@ -953,11 +907,9 @@ export const listenToCustomers = (callback) => {
       };
     });
 
-    // Calculate totalOrders and totalSpent for each customer from orders
     const orders = await getOrders();
 
     const enrichedCustomers = customers.map(customer => {
-      // Match using customerId field from DB, fallback to doc id
       const customerId = customer.customerId || customer.id;
       const customerOrders = orders.filter(order => order.customer_id === customerId);
       const totalOrders = customerOrders.length;
@@ -999,7 +951,7 @@ export const listenToPayments = (callback) => {
   });
 };
 
-// ==================== ADMIN AUTHENTICATION ====================
+// Admin Authentication
 
 export const getAdminByUsername = async (username) => {
   try {
@@ -1033,7 +985,6 @@ export const getAdminByEmail = async (email) => {
 
 export const verifyAdminCredentials = async (emailOrUsername, password) => {
   try {
-    // Try to find admin by email first, then by username
     let admin = await getAdminByEmail(emailOrUsername);
     if (!admin) {
       admin = await getAdminByUsername(emailOrUsername);
@@ -1043,9 +994,7 @@ export const verifyAdminCredentials = async (emailOrUsername, password) => {
       return { success: false, message: 'Invalid credentials' };
     }
 
-    // Direct password comparison (you may want to use hashing in production)
     if (admin.password === password) {
-      // Return admin data without password
       const { password: _, ...adminData } = admin;
       return { success: true, admin: adminData };
     }
@@ -1057,48 +1006,57 @@ export const verifyAdminCredentials = async (emailOrUsername, password) => {
   }
 };
 
-// ==================== ANALYTICS & STATISTICS ====================
+// Dashboard Statistics
 
 export const getStatistics = async () => {
   try {
-    const [customers, tailors, riders, orders, payments] = await Promise.all([
+    const [customers, tailors, riders, orders] = await Promise.all([
       getCustomers(),
       getTailors(),
       getRiders(),
-      getOrders(),
-      getPayments()
+      getOrders()
     ]);
 
-    const totalRevenue = payments
-      .filter(p => p.status === 'completed')
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    // Calculate total revenue (Admin gets 10% commission from completed orders)
+    // Orders are considered completed from status 5 (COMPLETED_TAILOR) onwards
+    const ADMIN_COMMISSION_RATE = 0.10; // 10%
+    const totalRevenue = orders
+      .filter(o => o.status >= 5 && o.status <= 11) // Completed by tailor to self delivery
+      .reduce((sum, o) => sum + ((o.total_price || 0) * ADMIN_COMMISSION_RATE), 0);
 
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
-    const monthlyRevenue = payments
-      .filter(p => {
-        if (!p.createdAt) return false;
-        const date = p.createdAt.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
+    const monthlyRevenue = orders
+      .filter(o => {
+        if (!o.created_at || o.status < 5) return false;
+        const date = o.created_at.toDate ? o.created_at.toDate() : new Date(o.created_at);
         return date.getMonth() === currentMonth &&
                date.getFullYear() === currentYear &&
-               p.status === 'completed';
+               o.status >= 5 && o.status <= 11; // Completed orders
       })
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .reduce((sum, o) => sum + ((o.total_price || 0) * ADMIN_COMMISSION_RATE), 0);
+
+    // Order status counts using numeric values
+    // Status values: -3=rejected, -2=cancelled, -1=just_created, 0=unassigned, 1-9=in_progress, 10=completed
+    const pendingOrders = orders.filter(o => o.status === 0 || o.status === -1).length;
+    const inProgressOrders = orders.filter(o => o.status >= 1 && o.status <= 9).length;
+    const completedOrders = orders.filter(o => o.status === 10 || o.status === 11).length;
+    const cancelledOrders = orders.filter(o => o.status === -2 || o.status === -3).length;
 
     return {
       totalCustomers: customers.length,
       totalTailors: tailors.length,
-      pendingTailors: tailors.filter(t => t.status === 'pending').length,
-      approvedTailors: tailors.filter(t => t.status === 'approved' || t.status === 'active').length,
+      pendingTailors: tailors.filter(t => t.status === 0).length, // 0 = pending
+      approvedTailors: tailors.filter(t => t.status === 1).length, // 1 = approved/active
       totalRiders: riders.length,
-      pendingRiders: riders.filter(r => r.status === 'pending').length,
-      approvedRiders: riders.filter(r => r.status === 'approved' || r.status === 'active').length,
+      pendingRiders: riders.filter(r => r.verification_status === 0).length, // 0 = pending
+      approvedRiders: riders.filter(r => r.verification_status === 1).length, // 1 = approved/active
       totalOrders: orders.length,
-      pendingOrders: orders.filter(o => o.status === 'pending').length,
-      inProgressOrders: orders.filter(o => !['pending', 'delivered', 'cancelled', 'payment_completed'].includes(o.status)).length,
-      completedOrders: orders.filter(o => o.status === 'delivered' || o.status === 'payment_completed').length,
-      cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+      pendingOrders,
+      inProgressOrders,
+      completedOrders,
+      cancelledOrders,
       totalRevenue,
       monthlyRevenue
     };
@@ -1108,18 +1066,17 @@ export const getStatistics = async () => {
   }
 };
 
-// ==================== CHAT / MESSAGES (Admin Support) ====================
+// Admin Chat Functionality
 
 export const getAdminConversations = async (adminId) => {
   try {
-    // Query without orderBy to avoid index requirement initially
     const q = query(
       collection(db, 'conversations'),
-      where('participants', 'array-contains', adminId)
+      where('participants', 'array-contains', adminId),
+      orderBy('last_updated', 'desc')
     );
     const querySnapshot = await getDocs(q);
 
-    // Enrich conversations with participant details
     const conversations = await Promise.all(
       querySnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
@@ -1162,12 +1119,7 @@ export const getAdminConversations = async (adminId) => {
       })
     );
 
-    // Sort by last_updated in JavaScript (descending - newest first)
-    return conversations.sort((a, b) => {
-      const aTime = a.last_updated?.toMillis?.() || 0;
-      const bTime = b.last_updated?.toMillis?.() || 0;
-      return bTime - aTime;
-    });
+    return conversations;
   } catch (error) {
     console.error('Error getting admin conversations:', error);
     throw error;
@@ -1194,18 +1146,21 @@ export const getConversationMessages = async (conversationId) => {
 export const sendMessage = async (conversationId, messageData) => {
   try {
     const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    const messageText = messageData.text || messageData.message; // Support both field names
+    const messageType = messageData.type || 'text';
+
     await addDoc(messagesRef, {
       sender_id: messageData.sender_id,
-      sender_type: messageData.sender_type || 'admin',
-      message: messageData.message,
+      text: messageText,
+      type: messageType,
       timestamp: serverTimestamp(),
-      read: false
+      read_by: []
     });
 
     // Update conversation last_message and last_updated
     const conversationRef = doc(db, 'conversations', conversationId);
     await updateDoc(conversationRef, {
-      last_message: messageData.message,
+      last_message: messageType === 'text' ? messageText : `[${messageType}]`,
       last_updated: serverTimestamp()
     });
   } catch (error) {
@@ -1216,16 +1171,19 @@ export const sendMessage = async (conversationId, messageData) => {
 
 export const markMessagesAsRead = async (conversationId, userId) => {
   try {
-    const q = query(
-      collection(db, 'conversations', conversationId, 'messages'),
-      where('sender_id', '!=', userId),
-      where('read', '==', false)
-    );
-    const querySnapshot = await getDocs(q);
+    // Get all messages in the conversation
+    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    const querySnapshot = await getDocs(messagesRef);
 
     const batch = writeBatch(db);
     querySnapshot.docs.forEach((docSnap) => {
-      batch.update(docSnap.ref, { read: true });
+      const data = docSnap.data();
+      // Only mark as read if the user is not the sender and hasn't already read it
+      if (data.sender_id !== userId && (!data.read_by || !data.read_by.includes(userId))) {
+        batch.update(docSnap.ref, {
+          read_by: arrayUnion(userId)
+        });
+      }
     });
 
     await batch.commit();
@@ -1252,19 +1210,20 @@ export const listenToConversationMessages = (conversationId, callback) => {
 
 export const createConversation = async (adminId, participantId, participantType) => {
   try {
-    const conversationRef = await addDoc(collection(db, 'conversations'), {
-      participants: [adminId, participantId],
-      participant_types: {
-        [adminId]: 'admin',
-        [participantId]: participantType
-      },
-      type: `admin_${participantType}`,
-      last_message: '',
-      last_updated: serverTimestamp(),
-      created_at: serverTimestamp()
+    // Create deterministic conversation ID (sorted user IDs joined with underscore)
+    // This matches the Flutter app structure from chat_repository.dart
+    const participants = [adminId, participantId].sort();
+    const conversationId = participants.join('_');
+
+    // Use setDoc with the deterministic ID instead of addDoc
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await setDoc(conversationRef, {
+      participants: participants,
+      last_message: null,
+      last_updated: serverTimestamp()
     });
 
-    return conversationRef.id;
+    return conversationId;
   } catch (error) {
     console.error('Error creating conversation:', error);
     throw error;
@@ -1272,30 +1231,22 @@ export const createConversation = async (adminId, participantId, participantType
 };
 
 /**
- * Find existing conversation or create new one
+ * Find existing conversation or create new one using deterministic ID
+ * This matches the Flutter app structure from chat_repository.dart
  * Returns conversation ID
  */
 export const findOrCreateConversation = async (adminId, participantId, participantType) => {
   try {
+    // Create deterministic conversation ID (sorted user IDs joined with underscore)
+    const participants = [adminId, participantId].sort();
+    const conversationId = participants.join('_');
+
     // Check if conversation already exists
-    const q = query(
-      collection(db, 'conversations'),
-      where('participants', 'array-contains', adminId)
-    );
-    const querySnapshot = await getDocs(q);
+    const conversationRef = doc(db, 'conversations', conversationId);
+    const conversationSnap = await getDoc(conversationRef);
 
-    // Find conversation with this specific participant
-    let existingConversation = null;
-    querySnapshot.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      if (data.participants && data.participants.includes(participantId)) {
-        existingConversation = { id: docSnap.id, ...data };
-      }
-    });
-
-    // If conversation exists, return its ID
-    if (existingConversation) {
-      return existingConversation.id;
+    if (conversationSnap.exists()) {
+      return conversationId;
     }
 
     // Otherwise, create new conversation

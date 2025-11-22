@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-/**
- * Custom hook for Firestore CRUD operations with loading and error states
- */
 export const useFirestore = (fetchFunction) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,9 +32,7 @@ export const useFirestore = (fetchFunction) => {
   return { data, loading, error, refetch };
 };
 
-/**
- * Hook for performing async operations with loading state
- */
+
 export const useAsyncOperation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

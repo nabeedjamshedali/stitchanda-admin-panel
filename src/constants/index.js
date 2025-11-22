@@ -1,5 +1,6 @@
-// Order Status Constants (Following Stitchanda Rules PDF)
 export const ORDER_STATUSES = {
+  REJECTED: -3,               // Rejected
+  CANCELLED: -2,              // Cancelled
   JUST_CREATED: -1,           // Just created order
   UNASSIGNED: 0,              // Unassigned (customer side)
   ASSIGNED_RIDER: 1,          // Assigned (rider)
@@ -12,11 +13,12 @@ export const ORDER_STATUSES = {
   PICKED_UP_TAILOR: 8,        // Picked up (from tailor)
   COMPLETED_TO_CUSTOMER: 9,   // Completed (to customer)
   CUSTOMER_CONFIRMATION: 10,  // Customer confirmation → received
-  SELF_DELIVERY: 11,          // Self delivery
-  CANCELLED: -2               // Cancelled
+  SELF_DELIVERY: 11           // Self delivery
 };
 
 export const ORDER_STATUS_LABELS = {
+  [ORDER_STATUSES.REJECTED]: 'Rejected',
+  [ORDER_STATUSES.CANCELLED]: 'Cancelled',
   [ORDER_STATUSES.JUST_CREATED]: 'Just Created',
   [ORDER_STATUSES.UNASSIGNED]: 'Unassigned',
   [ORDER_STATUSES.ASSIGNED_RIDER]: 'Assigned to Rider',
@@ -29,11 +31,12 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUSES.PICKED_UP_TAILOR]: 'Picked Up from Tailor',
   [ORDER_STATUSES.COMPLETED_TO_CUSTOMER]: 'Delivered to Customer',
   [ORDER_STATUSES.CUSTOMER_CONFIRMATION]: 'Customer Confirmed',
-  [ORDER_STATUSES.SELF_DELIVERY]: 'Self Delivery',
-  [ORDER_STATUSES.CANCELLED]: 'Cancelled'
+  [ORDER_STATUSES.SELF_DELIVERY]: 'Self Delivery'
 };
 
 export const ORDER_STATUS_COLORS = {
+  [ORDER_STATUSES.REJECTED]: 'bg-red-100 text-red-800',
+  [ORDER_STATUSES.CANCELLED]: 'bg-red-100 text-red-800',
   [ORDER_STATUSES.JUST_CREATED]: 'bg-gray-100 text-gray-800',
   [ORDER_STATUSES.UNASSIGNED]: 'bg-yellow-100 text-yellow-800',
   [ORDER_STATUSES.ASSIGNED_RIDER]: 'bg-blue-100 text-blue-800',
@@ -46,11 +49,9 @@ export const ORDER_STATUS_COLORS = {
   [ORDER_STATUSES.PICKED_UP_TAILOR]: 'bg-cyan-100 text-cyan-800',
   [ORDER_STATUSES.COMPLETED_TO_CUSTOMER]: 'bg-green-100 text-green-800',
   [ORDER_STATUSES.CUSTOMER_CONFIRMATION]: 'bg-emerald-100 text-emerald-800',
-  [ORDER_STATUSES.SELF_DELIVERY]: 'bg-lime-100 text-lime-800',
-  [ORDER_STATUSES.CANCELLED]: 'bg-red-100 text-red-800'
+  [ORDER_STATUSES.SELF_DELIVERY]: 'bg-lime-100 text-lime-800'
 };
 
-// User Status Constants
 export const USER_STATUSES = {
   PENDING: 'pending',
   APPROVED: 'approved',
@@ -75,7 +76,6 @@ export const USER_STATUS_COLORS = {
   [USER_STATUSES.REJECTED]: 'bg-red-100 text-red-800'
 };
 
-// Payment Status Constants
 export const PAYMENT_STATUSES = {
   PENDING: 'pending',
   COMPLETED: 'completed',
@@ -94,11 +94,9 @@ export const PAYMENT_STATUS_COLORS = {
   [PAYMENT_STATUSES.REFUNDED]: 'bg-red-100 text-red-800'
 };
 
-// Pagination
 export const ITEMS_PER_PAGE = 10;
 export const DEFAULT_PAGE_SIZE = 10;
 export const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
-// Date Formats
 export const DATE_FORMAT = 'MMM dd, yyyy';
 export const DATETIME_FORMAT = 'MMM dd, yyyy HH:mm';
