@@ -908,7 +908,11 @@ export const listenToCustomers = (callback) => {
       const customerOrders = orders.filter(order => order.customer_id === customerId);
       const totalOrders = customerOrders.length;
       const totalSpent = customerOrders
-        .filter(order => order.payment_status?.toLowerCase() === 'paid')
+        .filter(order => {
+          const status = Number(order.status);
+          // Include completed orders (status 10) or paid orders
+          return status === 10 || order.payment_status?.toLowerCase() === 'paid';
+        })
         .reduce((sum, order) => sum + (order.total_price || 0), 0);
 
       return {
@@ -1015,7 +1019,10 @@ export const getStatistics = async () => {
     // Orders are considered completed from status 5 (COMPLETED_TAILOR) onwards
     const ADMIN_COMMISSION_RATE = 0.10; // 10%
     const totalRevenue = orders
-      .filter(o => o.status >= 5 && o.status <= 11) // Completed by tailor to self delivery
+      .filter(o => {
+        const status = Number(o.status);
+        return status >= 5 && status <= 11; // Completed by tailor to self delivery
+      })
       .reduce((sum, o) => sum + ((o.total_price || 0) * ADMIN_COMMISSION_RATE), 0);
 
     const currentMonth = new Date().getMonth();
@@ -1023,20 +1030,34 @@ export const getStatistics = async () => {
 
     const monthlyRevenue = orders
       .filter(o => {
-        if (!o.created_at || o.status < 5) return false;
+        if (!o.created_at) return false;
+        const status = Number(o.status);
+        if (status < 5) return false;
         const date = o.created_at.toDate ? o.created_at.toDate() : new Date(o.created_at);
         return date.getMonth() === currentMonth &&
                date.getFullYear() === currentYear &&
-               o.status >= 5 && o.status <= 11; // Completed orders
+               status >= 5 && status <= 11; // Completed orders
       })
       .reduce((sum, o) => sum + ((o.total_price || 0) * ADMIN_COMMISSION_RATE), 0);
 
     // Order status counts using numeric values
-    // Status values: -3=rejected_by_tailor, -2=just_created, -1=accepted_by_tailor, 0=unassigned, 1-9=in_progress, 10=completed, 11=self_delivery
-    const pendingOrders = orders.filter(o => o.status === -2 || o.status === -1 || o.status === 0).length;
-    const inProgressOrders = orders.filter(o => o.status >= 1 && o.status <= 9).length;
-    const completedOrders = orders.filter(o => o.status === 10 || o.status === 11).length;
-    const cancelledOrders = orders.filter(o => o.status === -3).length;
+    // Status values: -3=rejected_by_tailor, -2=just_created, -1=accepted_by_tailor, 0=unassigned, 1-9=in_progress, 10=completed (customer confirmed)
+    const pendingOrders = orders.filter(o => {
+      const status = Number(o.status);
+      return status === -2 || status === -1 || status === 0;
+    }).length;
+    const inProgressOrders = orders.filter(o => {
+      const status = Number(o.status);
+      return status >= 1 && status <= 9;
+    }).length;
+    const completedOrders = orders.filter(o => {
+      const status = Number(o.status);
+      return status === 10;
+    }).length;
+    const cancelledOrders = orders.filter(o => {
+      const status = Number(o.status);
+      return status === -3;
+    }).length;
 
     return {
       totalCustomers: customers.length,
@@ -1118,6 +1139,65 @@ export const getAdminConversations = async (adminId) => {
     console.error('Error getting admin conversations:', error);
     throw error;
   }
+};
+
+export const listenToAdminConversations = (adminId, callback) => {
+  const q = query(
+    collection(db, 'conversations'),
+    where('participants', 'array-contains', adminId),
+    orderBy('last_updated', 'desc')
+  );
+
+  return onSnapshot(q, async (snapshot) => {
+    try {
+      const conversations = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data();
+          const otherParticipantId = data.participants?.find(p => p !== adminId);
+
+          // Determine participant type and fetch details
+          let participantDetails = null;
+          let participantType = null;
+
+          if (otherParticipantId) {
+            // Check in customers first
+            const customerDoc = await getDoc(doc(db, 'customer', otherParticipantId));
+            if (customerDoc.exists()) {
+              participantDetails = { id: customerDoc.id, ...customerDoc.data() };
+              participantType = 'customer';
+            } else {
+              // Check in tailors
+              const tailorDoc = await getDoc(doc(db, 'tailor', otherParticipantId));
+              if (tailorDoc.exists()) {
+                participantDetails = { id: tailorDoc.id, ...tailorDoc.data() };
+                participantType = 'tailor';
+              } else {
+                // Check in drivers
+                const driverDoc = await getDoc(doc(db, 'driver', otherParticipantId));
+                if (driverDoc.exists()) {
+                  participantDetails = { id: driverDoc.id, ...driverDoc.data() };
+                  participantType = 'rider';
+                }
+              }
+            }
+          }
+
+          return {
+            id: docSnap.id,
+            ...data,
+            participantType,
+            participantName: participantDetails?.name || 'Unknown',
+            participantEmail: participantDetails?.email || '-',
+          };
+        })
+      );
+
+      callback(conversations);
+    } catch (error) {
+      console.error('Error in conversation listener:', error);
+      callback([]);
+    }
+  });
 };
 
 export const getConversationMessages = async (conversationId) => {

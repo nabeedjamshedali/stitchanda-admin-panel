@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, CheckCircle, Users, Package, Scissors } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle, Users, Package } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -34,14 +35,13 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-[35%] bg-[#A67B5B] text-white p-8 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-[35%] bg-[#D29356] text-white p-8 flex-col justify-between">
         <div>
           <div className="mb-8">
             <CheckCircle className="w-10 h-10 mb-4" />
             <h1 className="text-2xl font-bold mb-3">Stitchanda Admin System</h1>
             <p className="text-white/90 text-sm leading-relaxed">
-              Register your company and manage your tailoring operations. Ensure compliance,
-              transparency, and trust with our automated management and reporting system.
+              Manage and monitor all operations of the Stitchanda platform. This panel helps the admin team oversee customers, tailors, orders, and payment activities within our system.
             </p>
           </div>
 
@@ -50,10 +50,9 @@ const Login = () => {
               <div className="mb-2">
                 <Users className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">1- Register Your Company</h3>
+              <h3 className="text-lg font-semibold mb-2">Sign In as Admin</h3>
               <p className="text-white/90 text-sm leading-relaxed">
-                Start by creating an account and registering your company details.
-                Provide your business credentials for verification.
+                Log in using your assigned admin credentials to access the Stitchanda platform controls and management tools.
               </p>
             </div>
 
@@ -61,21 +60,19 @@ const Login = () => {
               <div className="mb-2">
                 <Package className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">2- Submit Required Details</h3>
+              <h3 className="text-lg font-semibold mb-2">Review System Activity</h3>
               <p className="text-white/90 text-sm leading-relaxed">
-                Upload essential documents such as production records, compliance
-                certificates, and quality assurance reports for review.
+                View and handle customers, tailors, orders, and payment details. Monitor the progress of tailoring tasks and ensure everything is running smoothly.
               </p>
             </div>
 
             <div>
               <div className="mb-2">
-                <Scissors className="w-6 h-6" />
+                <img src={logo} alt="Stitchanda Logo" className="w-6 h-6 object-contain" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">3- Start Managing</h3>
+              <h3 className="text-lg font-semibold mb-2">Manage Platform Settings</h3>
               <p className="text-white/90 text-sm leading-relaxed">
-                Once verified, manage customers, tailors, orders, and track your
-                business growth with comprehensive analytics.
+                Update system configurations, track commissions, review reports, and maintain the overall performance of the Stitchanda application.
               </p>
             </div>
           </div>
@@ -85,12 +82,16 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center px-6 py-6 bg-white">
         <div className="w-full max-w-md">
           <div className="lg:hidden text-center mb-6">
-            <Scissors className="w-14 h-14 mx-auto text-[#A67B5B] mb-2" />
+            <div className="w-28 h-28 mx-auto mb-3">
+              <img src={logo} alt="Stitchanda Logo" className="w-full h-full object-contain" />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900">Stitchanda</h1>
           </div>
 
           <div className="hidden lg:flex items-center justify-center mb-12">
-            <Scissors className="w-16 h-16 text-[#A67B5B]" />
+            <div className="w-32 h-32">
+              <img src={logo} alt="Stitchanda Logo" className="w-full h-full object-contain" />
+            </div>
           </div>
 
           <div className="text-center mb-10">
@@ -109,7 +110,7 @@ const Login = () => {
                 placeholder="Enter your email"
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-[#EEF2F6] border-2 border-[#EEF2F6] rounded-lg transition-all focus:outline-none focus:border-[#A67B5B] focus:bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
+                className="w-full px-4 py-3 bg-[#EEF2F6] border-2 border-[#EEF2F6] rounded-lg transition-all focus:outline-none focus:border-[#D49649] focus:bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
               />
             </div>
 
@@ -121,7 +122,7 @@ const Login = () => {
                 placeholder="Enter your password"
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 pr-12 bg-[#EEF2F6] border-2 border-[#EEF2F6] rounded-lg transition-all focus:outline-none focus:border-[#A67B5B] focus:bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
+                className="w-full px-4 py-3 pr-12 bg-[#EEF2F6] border-2 border-[#EEF2F6] rounded-lg transition-all focus:outline-none focus:border-[#D49649] focus:bg-white disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
               />
               <button
                 type="button"
@@ -140,7 +141,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[#A67B5B] hover:bg-[#8D6A4F] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              className="w-full py-3 bg-[#D29356] hover:bg-[#b87d47] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-1"
             >
               {loading ? 'Signing in...' : 'Log In'}
             </button>

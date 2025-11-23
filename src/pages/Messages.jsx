@@ -6,7 +6,7 @@ import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
 import { Send, MessageCircle, User as UserIcon, Scissors, Bike, Plus, Search } from 'lucide-react';
 import {
-  getAdminConversations,
+  listenToAdminConversations,
   listenToConversationMessages,
   sendMessage,
   markMessagesAsRead,
@@ -35,42 +35,46 @@ const Messages = () => {
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        setLoading(true);
-        const adminId = user?.uid || 'admin_id'; 
-        const convos = await getAdminConversations(adminId);
-        setConversations(convos || []);
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        if (error.code !== 'failed-precondition') {
-          toast.error('Failed to load conversations');
-        }
-        setConversations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const adminId = "XgOkNWeAWWVV5VgQlIO1";
+    setLoading(true);
+    console.log('Setting up conversation listener for admin:', adminId);
 
-    fetchConversations();
-  }, [user]);
+    // Set up real-time listener for conversations
+    const unsubscribe = listenToAdminConversations(adminId, (convos) => {
+      console.log('Received conversations:', convos?.length || 0);
+      setConversations(convos || []);
+      setLoading(false);
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      console.log('Cleaning up conversation listener');
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedConversation) return;
 
+    const adminId = "XgOkNWeAWWVV5VgQlIO1";
+    console.log('Setting up message listener for conversation:', selectedConversation.id);
+
     const unsubscribe = listenToConversationMessages(
       selectedConversation.id,
       (msgs) => {
+        console.log('Received messages:', msgs?.length || 0);
         setMessages(msgs);
         scrollToBottom();
 
-        const adminId = user?.uid || 'admin_id';
         markMessagesAsRead(selectedConversation.id, adminId).catch(console.error);
       }
     );
 
-    return () => unsubscribe();
-  }, [selectedConversation, user]);
+    return () => {
+      console.log('Cleaning up message listener');
+      unsubscribe();
+    };
+  }, [selectedConversation]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,6 +97,10 @@ const Messages = () => {
   const handleStartConversation = async (selectedUser) => {
     try {
       const adminId = "XgOkNWeAWWVV5VgQlIO1";
+      console.log('Starting conversation with:', selectedUser.name, 'Admin ID:', adminId);
+
+      // Close modal immediately for better UX
+      setShowNewChatModal(false);
 
       const conversationId = await findOrCreateConversation(
         adminId,
@@ -100,15 +108,22 @@ const Messages = () => {
         selectedUser.type
       );
 
-      const convos = await getAdminConversations(adminId);
-      setConversations(convos || []);
+      console.log('Conversation created/found:', conversationId);
 
-      const newConversation = convos.find(c => c.id === conversationId);
-      if (newConversation) {
-        setSelectedConversation(newConversation);
-      }
+      // Create a temporary conversation object to display immediately
+      const tempConversation = {
+        id: conversationId,
+        participantName: selectedUser.name,
+        participantEmail: selectedUser.email,
+        participantType: selectedUser.type,
+        last_message: null,
+        last_updated: new Date(),
+      };
 
-      setShowNewChatModal(false);
+      // Set selected conversation immediately
+      // The real-time listener will automatically update with full data
+      setSelectedConversation(tempConversation);
+
       toast.success(`Started conversation with ${selectedUser.name}`);
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -122,7 +137,7 @@ const Messages = () => {
 
     try {
       setSending(true);
-      const adminId = user?.uid || 'admin_id';
+      const adminId = "XgOkNWeAWWVV5VgQlIO1";
 
       await sendMessage(selectedConversation.id, {
         sender_id: adminId,
@@ -318,7 +333,7 @@ const Messages = () => {
                     </div>
                   ) : (
                     messages.map((msg) => {
-                      const adminId = user?.uid || 'admin_id';
+                      const adminId = "XgOkNWeAWWVV5VgQlIO1";
                       const isAdmin = msg.sender_id === adminId;
                       return (
                         <div

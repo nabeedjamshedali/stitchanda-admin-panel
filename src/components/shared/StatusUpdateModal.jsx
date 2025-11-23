@@ -58,7 +58,7 @@ const StatusUpdateModal = ({
               onChange={(e) => handleChange('comment', e.target.value)}
               placeholder="Add a comment..."
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A67B5B] focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D49649] focus:border-transparent resize-none"
             />
           </div>
         )}

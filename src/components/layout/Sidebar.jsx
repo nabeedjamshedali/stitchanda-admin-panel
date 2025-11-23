@@ -63,10 +63,10 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-[#6B4423] h-screen fixed left-0 top-0 flex flex-col">
+    <div className="w-64 bg-[#D29356] h-screen fixed left-0 top-0 flex flex-col">
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-[#8D6A4F]">
-        <h1 className="text-2xl font-bold text-white">Stitchanda</h1>
+      <div className="h-16 flex items-center px-6 border-b-2 border-white/20 bg-black/10">
+        <h1 className="text-2xl font-bold text-white drop-shadow-md">Stitchanda</h1>
       </div>
 
       {/* Navigation */}
@@ -82,8 +82,8 @@ const Sidebar = () => {
                 clsx(
                   'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
                   isActive
-                    ? 'bg-[#8D6A4F] text-white'
-                    : 'text-gray-300 hover:bg-[#8D6A4F]/50 hover:text-white'
+                    ? 'bg-white/95 text-[#D29356] shadow-md'
+                    : 'text-white/90 hover:bg-white/10 hover:text-white'
                 )
               }
             >
@@ -92,7 +92,7 @@ const Sidebar = () => {
                   <Icon
                     className={clsx(
                       'w-5 h-5 mr-3',
-                      isActive ? 'text-white' : 'text-gray-400'
+                      isActive ? 'text-[#D29356]' : 'text-white/80'
                     )}
                   />
                   {item.name}
@@ -104,21 +104,21 @@ const Sidebar = () => {
       </nav>
 
       {/* Admin Profile */}
-      <div className="border-t border-[#8D6A4F]">
+      <div className="border-t-2 border-white/20 bg-black/10">
         <div className="p-4 flex items-center space-x-3">
-          <div className="w-10 h-10 bg-[#A67B5B] rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
             <User className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">Admin</p>
-            <p className="text-xs text-gray-400 truncate">Super Admin</p>
+            <p className="text-xs text-white/60 truncate">Super Admin</p>
           </div>
         </div>
 
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full px-4 py-3 flex items-center space-x-3 text-gray-300 hover:bg-[#8D6A4F]/50 hover:text-white transition-colors"
+          className="w-full px-4 py-3 flex items-center space-x-3 text-white/90 hover:bg-white/10 hover:text-white transition-colors"
         >
           <LogOut className="w-5 h-5" />
           <span className="text-sm font-medium">Logout</span>

@@ -11,13 +11,12 @@ import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import StatusBadge from '../components/shared/StatusBadge';
-import { Plus, Edit, Eye, XCircle, ArrowRight } from 'lucide-react';
+import { Plus, Edit, Eye, ArrowRight } from 'lucide-react';
 import {
   getOrders,
   addOrder,
   updateOrderStatus,
   assignRider,
-  cancelOrder,
   listenToOrders,
   getActiveRiders,
   getCustomers,
@@ -44,7 +43,6 @@ const Orders = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAssignRiderModal, setShowAssignRiderModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [riders, setRiders] = useState([]);
@@ -132,12 +130,6 @@ const Orders = () => {
     setShowUpdateStatusModal(true);
   };
 
-  const handleCancelClick = (order) => {
-    setSelectedOrder(order);
-    setAssignData({ ...assignData, cancelReason: '' });
-    setShowCancelDialog(true);
-  };
-
   const handleSubmitAdd = async (e) => {
     e.preventDefault();
     const selectedCustomer = customers.find(c => c.id === formData.customerId);
@@ -167,14 +159,6 @@ const Orders = () => {
       'Order status updated successfully'
     );
     setShowUpdateStatusModal(false);
-  };
-
-  const handleCancelOrder = async () => {
-    await execute(
-      () => cancelOrder(selectedOrder.id, assignData.cancelReason),
-      'Order cancelled successfully'
-    );
-    setShowCancelDialog(false);
   };
 
   const statusOptions = [
@@ -247,35 +231,19 @@ const Orders = () => {
               Assign Rider
             </Button>
           )}
-          <>
-            {row.status !== 10 && row.status !== 11 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={ArrowRight}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleUpdateStatus(row);
-                }}
-              >
-                Update
-              </Button>
-            )}
-            {row.status !== -3 && row.status !== 10 && row.status !== 11 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={XCircle}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCancelClick(row);
-                }}
-                className="text-red-600"
-              >
-                Cancel
-              </Button>
-            )}
-          </>
+          {row.status !== 10 && row.status !== 11 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={ArrowRight}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUpdateStatus(row);
+              }}
+            >
+              Update
+            </Button>
+          )}
         </div>
       ),
     },
@@ -430,34 +398,6 @@ const Orders = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-
-        {/* Cancel Order Dialog */}
-        <Modal
-          isOpen={showCancelDialog}
-          onClose={() => setShowCancelDialog(false)}
-          title="Cancel Order"
-          size="sm"
-        >
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Are you sure you want to cancel this order? This action cannot be undone.
-            </p>
-            <Input
-              label="Reason for cancellation (optional)"
-              value={assignData.cancelReason}
-              onChange={(e) => setAssignData({ ...assignData, cancelReason: e.target.value })}
-              placeholder="Enter reason..."
-            />
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button variant="secondary" onClick={() => setShowCancelDialog(false)}>
-                No, Keep Order
-              </Button>
-              <Button variant="danger" onClick={handleCancelOrder} loading={actionLoading}>
-                Yes, Cancel Order
-              </Button>
-            </div>
-          </div>
         </Modal>
       </div>
     </Layout>

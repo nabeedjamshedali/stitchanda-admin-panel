@@ -11,6 +11,7 @@ import {
   Scissors,
   Bike,
   ShoppingBag,
+  CheckCircle,
 } from 'lucide-react';
 import { getStatistics, getOrders, getCustomers } from '../lib/firebase';
 
@@ -164,7 +165,7 @@ const Dashboard = () => {
     <Layout title="Dashboard">
       <div className="space-y-6">
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Main Totals */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Revenue"
@@ -196,12 +197,18 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Secondary Stats - Order Status & Approvals */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <StatsCard
             title="Pending Orders"
             value={stats?.pendingOrders || 0}
             color="orange"
+          />
+          <StatsCard
+            title="Completed Orders"
+            value={stats?.completedOrders || 0}
+            icon={CheckCircle}
+            color="green"
           />
           <StatsCard
             title="Pending Tailors Approval"

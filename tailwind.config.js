@@ -7,23 +7,36 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Main Color Palette (matching Flutter app)
         primary: {
-          50: '#fdf8f3',
-          100: '#f9ede0',
-          200: '#f2d9bf',
-          300: '#e9bf94',
-          400: '#dfa167',
-          500: '#d2691e', // Main brown/orange
-          600: '#c19a6b',
-          700: '#a0724f',
-          800: '#825c3f',
-          900: '#6b4d35',
+          50: '#fef9f3',
+          100: '#fdf3e7',
+          200: '#fbe5c3',
+          300: '#f8d79f',
+          400: '#f0bb6f',
+          500: '#D49649', // Caramel - main accent
+          600: '#bf8541',
+          700: '#a06f37',
+          800: '#805a2d',
+          900: '#664825',
         },
+        caramel: '#D49649',
+        gold: '#DEA666',
+        coffee: '#BB7A49',
+        beige: '#E6BA88',
+        deepBrown: '#8E7051',
+        chocolate: '#5B4632',
         brown: {
-          light: '#CD853F',
-          DEFAULT: '#D2691E',
-          dark: '#8B4513',
-        }
+          light: '#DEA666',
+          DEFAULT: '#D49649',
+          dark: '#5B4632',
+        },
+        background: '#FFFDF9', // creamy white
+        surface: '#FFFFFF',
+        outline: '#E5E1DA',
+        textBlack: '#2A2A2A',
+        textGrey: '#7B7B7B',
+        iconGrey: '#8E8E8E',
       },
     },
   },

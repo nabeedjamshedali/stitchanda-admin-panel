@@ -160,19 +160,19 @@ export const debounce = (func, wait) => {
 export const getOrderStatusInfo = (status) => {
   const ORDER_STATUSES = {
     '-2': { description: 'Cancelled', color: 'bg-red-100 text-red-800' },
-    '-1': { description: 'Just Created', color: 'bg-gray-100 text-gray-800' },
-    '0': { description: 'Unassigned', color: 'bg-yellow-100 text-yellow-800' },
-    '1': { description: 'Assigned to Rider', color: 'bg-blue-100 text-blue-800' },
-    '2': { description: 'Picked Up', color: 'bg-indigo-100 text-indigo-800' },
-    '3': { description: 'Delivered to Tailor', color: 'bg-purple-100 text-purple-800' },
-    '4': { description: 'Received by Tailor', color: 'bg-orange-100 text-orange-800' },
-    '5': { description: 'Completed by Tailor', color: 'bg-teal-100 text-teal-800' },
-    '6': { description: 'Calling Rider', color: 'bg-yellow-100 text-yellow-800' },
-    '7': { description: 'Return Rider Assigned', color: 'bg-blue-100 text-blue-800' },
-    '8': { description: 'Picked Up from Tailor', color: 'bg-cyan-100 text-cyan-800' },
-    '9': { description: 'Delivered to Customer', color: 'bg-green-100 text-green-800' },
-    '10': { description: 'Customer Confirmed', color: 'bg-emerald-100 text-emerald-800' },
-    '11': { description: 'Self Delivery', color: 'bg-lime-100 text-lime-800' },
+    '-1': { description: 'Just Created', color: 'bg-[#fbe5c3] text-[#805a2d]' },
+    '0': { description: 'Unassigned', color: 'bg-[#fdf3e7] text-[#a06f37]' },
+    '1': { description: 'Assigned to Rider', color: 'bg-[#fbe5c3] text-[#805a2d]' },
+    '2': { description: 'Picked Up', color: 'bg-[#f8d79f] text-[#664825]' },
+    '3': { description: 'Delivered to Tailor', color: 'bg-[#f0bb6f] text-[#664825]' },
+    '4': { description: 'Received by Tailor', color: 'bg-[#DEA666] text-[#5B4632]' },
+    '5': { description: 'Completed by Tailor', color: 'bg-[#D49649] text-white' },
+    '6': { description: 'Calling Rider', color: 'bg-[#fbe5c3] text-[#805a2d]' },
+    '7': { description: 'Return Rider Assigned', color: 'bg-[#f8d79f] text-[#664825]' },
+    '8': { description: 'Picked Up from Tailor', color: 'bg-[#f0bb6f] text-[#664825]' },
+    '9': { description: 'Delivered to Customer', color: 'bg-[#DEA666] text-[#5B4632]' },
+    '10': { description: 'Customer Confirmed', color: 'bg-[#D49649] text-white' },
+    '11': { description: 'Self Delivery', color: 'bg-[#D49649] text-white' },
   };
 
   return ORDER_STATUSES[status.toString()] || { description: 'Unknown', color: 'bg-gray-100 text-gray-800' };
@@ -181,10 +181,10 @@ export const getOrderStatusInfo = (status) => {
 // Get status description and color for users (tailors/riders)
 export const getUserStatusInfo = (status) => {
   const USER_STATUSES = {
-    'pending': { description: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
-    'approved': { description: 'Approved', color: 'bg-blue-100 text-blue-800' },
-    'active': { description: 'Active', color: 'bg-green-100 text-green-800' },
-    'suspended': { description: 'Suspended', color: 'bg-orange-100 text-orange-800' },
+    'pending': { description: 'Pending', color: 'bg-[#fbe5c3] text-[#805a2d]' },
+    'approved': { description: 'Approved', color: 'bg-[#D49649] text-white' },
+    'active': { description: 'Active', color: 'bg-[#D49649] text-white' },
+    'suspended': { description: 'Suspended', color: 'bg-[#DEA666] text-[#5B4632]' },
     'rejected': { description: 'Rejected', color: 'bg-red-100 text-red-800' },
   };
 
@@ -194,9 +194,9 @@ export const getUserStatusInfo = (status) => {
 // Get payment status description and color
 export const getPaymentStatusInfo = (status) => {
   const PAYMENT_STATUSES = {
-    'pending': { description: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
-    'completed': { description: 'Completed', color: 'bg-green-100 text-green-800' },
-    'paid': { description: 'Paid', color: 'bg-green-100 text-green-800' },
+    'pending': { description: 'Pending', color: 'bg-[#fbe5c3] text-[#805a2d]' },
+    'completed': { description: 'Completed', color: 'bg-[#D49649] text-white' },
+    'paid': { description: 'Paid', color: 'bg-[#D49649] text-white' },
     'refunded': { description: 'Refunded', color: 'bg-red-100 text-red-800' },
   };
 
