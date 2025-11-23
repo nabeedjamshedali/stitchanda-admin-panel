@@ -79,13 +79,13 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-6 py-6 bg-white">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-6 sm:py-8 bg-white">
         <div className="w-full max-w-md">
           <div className="lg:hidden text-center mb-6">
-            <div className="w-28 h-28 mx-auto mb-3">
+            <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-3">
               <img src={logo} alt="Stitchanda Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Stitchanda</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Stitchanda</h1>
           </div>
 
           <div className="hidden lg:flex items-center justify-center mb-12">
@@ -94,11 +94,12 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">
-              Welcome Back to<br />Stitchanda Admin App
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 leading-tight">
+              Welcome Back to<br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>Stitchanda Admin App
             </h2>
-            <p className="text-gray-600">Log in to access your account.</p>
+            <p className="text-sm sm:text-base text-gray-600">Log in to access your account.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

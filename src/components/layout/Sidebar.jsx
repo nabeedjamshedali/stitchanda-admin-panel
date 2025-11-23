@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -9,6 +10,8 @@ import {
   MessageCircle,
   LogOut,
   User,
+  Menu,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +20,7 @@ import toast from 'react-hot-toast';
 const Sidebar = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -63,11 +67,35 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-[#D29356] h-screen fixed left-0 top-0 flex flex-col">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b-2 border-white/20 bg-black/10">
-        <h1 className="text-2xl font-bold text-white drop-shadow-md">Stitchanda</h1>
-      </div>
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#D29356] text-white rounded-lg shadow-lg"
+      >
+        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={clsx(
+          'w-64 bg-[#D29356] h-screen fixed left-0 top-0 flex flex-col z-40 transition-transform duration-300',
+          'md:translate-x-0',
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {/* Logo */}
+        <div className="h-16 flex items-center px-6 border-b-2 border-white/20 bg-black/10">
+          <h1 className="text-2xl font-bold text-white drop-shadow-md">Stitchanda</h1>
+        </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
@@ -78,6 +106,7 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               end={item.path === '/'}
+              onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
                 clsx(
                   'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
@@ -124,7 +153,8 @@ const Sidebar = () => {
           <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

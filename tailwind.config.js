@@ -7,14 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Main Color Palette (matching Flutter app)
+        // Main Color Palette 
         primary: {
           50: '#fef9f3',
           100: '#fdf3e7',
           200: '#fbe5c3',
           300: '#f8d79f',
           400: '#f0bb6f',
-          500: '#D49649', // Caramel - main accent
+          500: '#D49649', 
           600: '#bf8541',
           700: '#a06f37',
           800: '#805a2d',
@@ -31,7 +31,7 @@ export default {
           DEFAULT: '#D49649',
           dark: '#5B4632',
         },
-        background: '#FFFDF9', // creamy white
+        background: '#FFFDF9', 
         surface: '#FFFFFF',
         outline: '#E5E1DA',
         textBlack: '#2A2A2A',

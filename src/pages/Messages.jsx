@@ -4,7 +4,7 @@ import Loading from '../components/shared/Loading';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import Input from '../components/shared/Input';
-import { Send, MessageCircle, User as UserIcon, Scissors, Bike, Plus, Search } from 'lucide-react';
+import { Send, MessageCircle, User as UserIcon, Scissors, Bike, Plus, Search, ArrowLeft } from 'lucide-react';
 import {
   listenToAdminConversations,
   listenToConversationMessages,
@@ -185,32 +185,32 @@ const Messages = () => {
     <Layout title="Messages">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Messages</h2>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
               Chat with customers, tailors, and riders
             </p>
           </div>
           <Button
             onClick={handleOpenNewChat}
             icon={Plus}
-            className="bg-[#6B4423] hover:bg-[#8D6A4F] text-white"
+            className="bg-[#6B4423] hover:bg-[#8D6A4F] text-white w-full sm:w-auto"
           >
             New Conversation
           </Button>
         </div>
 
         {/* Chat Interface */}
-        <div className="bg-white rounded-lg shadow-md h-[calc(100vh-200px)] flex">
+        <div className="bg-white rounded-lg shadow-md h-[calc(100vh-200px)] flex flex-col md:flex-row">
           {/* Conversations List */}
-          <div className="w-1/3 border-r border-gray-200 flex flex-col">
+          <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-gray-200 flex-col`}>
             {/* Filter Tabs */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="p-3 sm:p-4 border-b border-gray-200">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                     filter === 'all'
                       ? 'bg-[#6B4423] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -220,36 +220,39 @@ const Messages = () => {
                 </button>
                 <button
                   onClick={() => setFilter('customer')}
-                  className={`px-2 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
+                  className={`px-1.5 sm:px-2 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
                     filter === 'customer'
                       ? 'bg-[#6B4423] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <UserIcon className="w-4 h-4" />
-                  Customers ({conversations.filter(c => c.participantType === 'customer').length})
+                  <UserIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Customers</span>
+                  <span className="sm:hidden">C</span> ({conversations.filter(c => c.participantType === 'customer').length})
                 </button>
                 <button
                   onClick={() => setFilter('tailor')}
-                  className={`px-2 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
+                  className={`px-1.5 sm:px-2 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
                     filter === 'tailor'
                       ? 'bg-[#6B4423] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <Scissors className="w-4 h-4" />
-                  Tailors ({conversations.filter(c => c.participantType === 'tailor').length})
+                  <Scissors className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Tailors</span>
+                  <span className="sm:hidden">T</span> ({conversations.filter(c => c.participantType === 'tailor').length})
                 </button>
                 <button
                   onClick={() => setFilter('rider')}
-                  className={`px-2 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
+                  className={`px-1.5 sm:px-2 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 justify-center ${
                     filter === 'rider'
                       ? 'bg-[#6B4423] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <Bike className="w-4 h-4" />
-                  Riders ({conversations.filter(c => c.participantType === 'rider').length})
+                  <Bike className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Riders</span>
+                  <span className="sm:hidden">R</span> ({conversations.filter(c => c.participantType === 'rider').length})
                 </button>
               </div>
             </div>
@@ -300,12 +303,19 @@ const Messages = () => {
           </div>
 
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-1 flex-col w-full`}>
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
                 <div className="p-4 border-b border-gray-200 bg-gray-50">
                   <div className="flex items-center gap-3">
+                    {/* Back Button for Mobile */}
+                    <button
+                      onClick={() => setSelectedConversation(null)}
+                      className="md:hidden p-2 hover:bg-gray-200 rounded-lg"
+                    >
+                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </button>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       getParticipantColor(selectedConversation.participantType)
                     }`}>
